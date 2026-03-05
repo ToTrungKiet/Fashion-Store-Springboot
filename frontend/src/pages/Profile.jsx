@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import axios from "axios";
+import { ShopContext } from "../context/ShopContext";
 
 const Profile = () => {
+
+  const { token } = useContext(ShopContext)
 
   const [form, setForm] = useState({
     firstName: "",
@@ -22,29 +25,30 @@ const Profile = () => {
   const loadProfile = async () => {
     try {
 
-      const userId = localStorage.getItem("userId");
+      if (token) {
+        const res = await axios.post(
+          "http://localhost:4000/api/user/profile",
+          {headers: {token}}
+        );
 
-      const res = await axios.post(
-        "http://localhost:4000/api/user/profile",
-        { userId }
-      );
+        if (res.data.success) {
 
-      if (res.data.success) {
+          const user = res.data.user;
 
-        const user = res.data.user;
+          setForm({
+            firstName: user.firstName || "",
+            lastName: user.lastName || "",
+            email: user.email || "",
+            address: user.address || "",
+            ward: user.ward || "",
+            district: user.district || "",
+            city: user.city || "",
+            phone: user.phone || ""
+          });
 
-        setForm({
-          firstName: user.firstName || "",
-          lastName: user.lastName || "",
-          email: user.email || "",
-          address: user.address || "",
-          ward: user.ward || "",
-          district: user.district || "",
-          city: user.city || "",
-          phone: user.phone || ""
-        });
-
+        }
       }
+
 
     } catch (error) {
 
@@ -63,33 +67,35 @@ const Profile = () => {
 
     try {
 
-      const userId = localStorage.getItem("userId");
+      if (token) {
+        const res = await axios.post(
+          "http://localhost:4000/api/user/update-profile",
+          {
+            ...form
+          },
+          {
+            headers: { token }
+          }
+        );
 
-      const res = await axios.post(
-        "http://localhost:4000/api/user/update-profile",
-        {
-          userId,
-          ...form
+        if (res.data.success) {
+
+          toast.success("Lưu thông tin thành công!");
+
+          // load lại dữ liệu mới
+          loadProfile();
+
+        } else {
+
+          toast.error(res.data.message);
+
         }
-      );
-
-      if (res.data.success) {
-
-        alert("Lưu thông tin thành công!");
-
-        // load lại dữ liệu mới
-        loadProfile();
-
-      } else {
-
-        alert(res.data.message);
-
       }
 
     } catch (error) {
 
       console.log(error);
-      alert("Có lỗi xảy ra");
+      toast.error("Có lỗi xảy ra");
 
     }
 
