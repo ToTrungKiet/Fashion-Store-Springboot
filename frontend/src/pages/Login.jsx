@@ -35,11 +35,6 @@ const Login = () => {
 
           localStorage.setItem('token', response.data.token)
 
-          // nếu backend trả userId
-          if (response.data.userId) {
-            localStorage.setItem('userId', response.data.userId)
-          }
-
           setName('')
           setEmail('')
           setPassword('')
@@ -68,9 +63,6 @@ const Login = () => {
 
           // lưu token
           localStorage.setItem('token', response.data.token)
-
-          // ⭐ lưu userId để dùng cho Profile
-          localStorage.setItem('userId', response.data.userId)
 
         } else {
 
