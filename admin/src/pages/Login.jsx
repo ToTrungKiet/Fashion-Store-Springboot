@@ -14,6 +14,7 @@ const Login = ({setToken}) => {
         const response = await axios.post(backendUrl + '/api/user/admin', {email, password})
         if (response.data.success) {
             setToken(response.data.token)
+            toast.success(response.data.message)
         } else {
             toast.error(response.data.message)
         }
@@ -31,7 +32,7 @@ const Login = ({setToken}) => {
             <form onSubmit={onSubmitHandler}>
                 <div className='mb-3 min-w-72'>
                     <p className='text-sm font-medium text-gray-700 mb-2'>Email</p>
-                    <input onChange={(e) => setEmail(e.target.value)} className='rounded-md w-full px-3 py-2 border border-gray-300 outline-none' type='email' placeholder='Nhập địa chỉ email' required/>
+                    <input onChange={(e) => setEmail(e.target.value)} className='rounded-md w-full px-3 py-2 border border-gray-300 outline-none' type='email' placeholder='Nhập địa chỉ email' autoComplete="username" required/>
                 </div>
                 <div className='mb-3 min-w-72'>
                     <p className='text-sm font-medium text-gray-700 mb-2'>Mật khẩu</p>

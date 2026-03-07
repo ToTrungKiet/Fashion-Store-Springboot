@@ -124,6 +124,7 @@ const Login = () => {
         type='email'
         className='w-full px-3 py-2 border border-gray-800'
         placeholder='Email'
+        autoComplete="username"
         required
       />
 
@@ -133,6 +134,7 @@ const Login = () => {
         type='password'
         className='w-full px-3 py-2 border border-gray-800'
         placeholder='Mật khẩu'
+        autoComplete="current-password"
         required
       />
 

@@ -1,9 +1,6 @@
 package com.fashionstore.backend.security;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
-
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,26 +13,32 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 @Component
-public class JwtAuthFilter extends OncePerRequestFilter {
+public class JwtAuthAdminFilter extends OncePerRequestFilter {
 
     @Value("${jwt.secret}")
     private String SECRET;
+
+    @Value("${admin.email}")
+    private String ADMIN_EMAIL;
+
+    @Value("${admin.password}")
+    private String ADMIN_PASSWORD;
 
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,
             HttpServletResponse response,
-            FilterChain filterChain) throws ServletException, IOException {
+            FilterChain filterChain
+    ) throws ServletException, IOException {
 
         String path = request.getRequestURI();
 
-        if (!path.equals("/api/user/profile") &&
-                !path.equals("/api/user/update-profile") &&
-                !path.equals("/api/cart/get") &&
-                !path.equals("/api/cart/add") &&
-                !path.equals("/api/cart/update") &&
-                !path.equals("/api/order/place") &&
-                !path.equals("/api/order/user-orders")) {
+        // Chỉ chạy filter với admin API
+        if(!path.equals("/api/product/add") &&
+           !path.equals("/api/product/update") &&
+           !path.equals("/api/product/remove") &&
+           !path.equals("/api/order/list") &&
+           !path.equals("/api/order/status")) {
 
             filterChain.doFilter(request, response);
             return;
@@ -49,32 +52,34 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             response.setContentType("application/json");
 
             response.getWriter().write(
-                    "{\"success\":false,\"message\":\"Vui lòng đăng nhập để tiếp tục !\"}");
+                    "{\"success\":false,\"message\":\"Vui lòng đăng nhập để tiếp tục !\"}"
+            );
 
             return;
         }
 
         try {
 
-            Claims claims = Jwts.parserBuilder()
+            String decoded = Jwts.parserBuilder()
                     .setSigningKey(SECRET.getBytes())
                     .build()
                     .parseClaimsJws(token)
-                    .getBody();
+                    .getBody()
+                    .getSubject();
 
-            String userId = claims.get("id").toString();
+            if (!decoded.equals(ADMIN_EMAIL + ":" + ADMIN_PASSWORD)) {
 
-            request.setAttribute("userId", userId);
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json");
+
+                response.getWriter().write(
+                        "{\"success\":false,\"message\":\"Bạn không có quyền truy cập !\"}"
+                );
+
+                return;
+            }
 
             filterChain.doFilter(request, response);
-
-        } catch (ExpiredJwtException e) {
-
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
-
-            response.getWriter().write(
-                    "{\"success\":false,\"message\":\"Token đã hết hạn\"}");
 
         } catch (Exception e) {
 
@@ -82,7 +87,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             response.setContentType("application/json");
 
             response.getWriter().write(
-                    "{\"success\":false,\"message\":\"" + e.getMessage() + "\"}");
+                    "{\"success\":false,\"message\":\"" + e.getMessage() + "\"}"
+            );
         }
     }
 }

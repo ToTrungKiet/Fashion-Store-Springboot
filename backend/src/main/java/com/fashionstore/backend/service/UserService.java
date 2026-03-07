@@ -131,10 +131,10 @@ public class UserService {
 
         if (email.equals(adminEmail) && password.equals(adminPassword)) {
 
-            String token = jwtUtil.generateToken(0L); // admin id = 0
+            String token = jwtUtil.generateTokenByString(email + ":" + password);
 
             response.put("success", true);
-            response.put("message", "Đăng nhập quản trị viên thành công !");
+            response.put("message", "Đăng nhập admin thành công !");
             response.put("token", token);
 
         } else {
