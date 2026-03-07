@@ -3,6 +3,7 @@ package com.fashionstore.backend.config;
 import com.fashionstore.backend.security.JwtAuthFilter;
 import com.fashionstore.backend.security.JwtAuthAdminFilter;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.*;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -13,8 +14,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 public class SecurityConfig {
 
-    private final JwtAuthFilter jwtAuthFilter;
-    private final JwtAuthAdminFilter jwtAuthAdminFilter;
+    @Autowired
+    private JwtAuthFilter jwtAuthFilter;
+    @Autowired
+    private JwtAuthAdminFilter jwtAuthAdminFilter;
 
     public SecurityConfig(JwtAuthFilter jwtAuthFilter,
                           JwtAuthAdminFilter jwtAuthAdminFilter) {

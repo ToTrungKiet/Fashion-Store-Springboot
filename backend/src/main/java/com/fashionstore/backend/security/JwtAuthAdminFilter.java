@@ -7,10 +7,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 @Component
 public class JwtAuthAdminFilter extends OncePerRequestFilter {
@@ -28,17 +31,16 @@ public class JwtAuthAdminFilter extends OncePerRequestFilter {
     protected void doFilterInternal(
             HttpServletRequest request,
             HttpServletResponse response,
-            FilterChain filterChain
-    ) throws ServletException, IOException {
+            FilterChain filterChain) throws ServletException, IOException {
 
         String path = request.getRequestURI();
 
         // Chỉ chạy filter với admin API
-        if(!path.equals("/api/product/add") &&
-           !path.equals("/api/product/update") &&
-           !path.equals("/api/product/remove") &&
-           !path.equals("/api/order/list") &&
-           !path.equals("/api/order/status")) {
+        if (!path.equals("/api/product/add") &&
+                !path.equals("/api/product/update") &&
+                !path.equals("/api/product/remove") &&
+                !path.equals("/api/order/list") &&
+                !path.equals("/api/order/status")) {
 
             filterChain.doFilter(request, response);
             return;
@@ -52,8 +54,7 @@ public class JwtAuthAdminFilter extends OncePerRequestFilter {
             response.setContentType("application/json");
 
             response.getWriter().write(
-                    "{\"success\":false,\"message\":\"Vui lòng đăng nhập để tiếp tục !\"}"
-            );
+                    "{\"success\":false,\"message\":\"Vui lòng đăng nhập để tiếp tục !\"}");
 
             return;
         }
@@ -73,11 +74,17 @@ public class JwtAuthAdminFilter extends OncePerRequestFilter {
                 response.setContentType("application/json");
 
                 response.getWriter().write(
-                        "{\"success\":false,\"message\":\"Bạn không có quyền truy cập !\"}"
-                );
+                        "{\"success\":false,\"message\":\"Bạn không có quyền truy cập !\"}");
 
                 return;
             }
+
+            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                    ADMIN_EMAIL,
+                    null,
+                    new ArrayList<>());
+
+            SecurityContextHolder.getContext().setAuthentication(authentication);
 
             filterChain.doFilter(request, response);
 
@@ -87,8 +94,7 @@ public class JwtAuthAdminFilter extends OncePerRequestFilter {
             response.setContentType("application/json");
 
             response.getWriter().write(
-                    "{\"success\":false,\"message\":\"" + e.getMessage() + "\"}"
-            );
+                    "{\"success\":false,\"message\":\"" + e.getMessage() + "\"}");
         }
     }
 }
