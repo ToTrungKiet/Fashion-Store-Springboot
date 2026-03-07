@@ -17,8 +17,8 @@ const Edit = ({ token }) => {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [price, setPrice] = useState('')
-  const [category, setCategory] = useState('Men')
-  const [subCategory, setSubCategory] = useState('Topwear')
+  const [category, setCategory] = useState('Nam')
+  const [subCategory, setSubCategory] = useState('Áo')
   const [bestseller, setBestseller] = useState(false)
   const [sizes, setSizes] = useState([])
 
@@ -39,6 +39,7 @@ const Edit = ({ token }) => {
         setImage2(p.image[1] || false)
         setImage3(p.image[2] || false)
         setImage4(p.image[3] || false)
+        toast.success(response.data.message)
       } else {
         toast.error(response.data.message)
       }
