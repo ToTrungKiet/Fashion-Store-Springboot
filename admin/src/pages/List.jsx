@@ -25,7 +25,7 @@ const List = ({token}) => {
 
   const removeProduct = async (id) => {
     try {
-      const response = await axios.post(backendUrl + '/api/product/remove', { id }, {headers: {token}})
+      const response = await axios.post(backendUrl + '/api/product/remove', { productId: id }, {headers: {token}})
       if (response.data.success) {
         toast.success(response.data.message)
         await fetchList()
@@ -63,8 +63,8 @@ const List = ({token}) => {
               <p>{item.category}</p>
               <p>{formatPrice(item.price)} {currency}</p>
               <div className='flex justify-end md:justify-center gap-2'>
-                <span onClick={() => removeProduct(item._id)} className='cursor-pointer text-lg'>X</span>
-                <span onClick={() => navigate(`/edit/${item._id}`)} className='cursor-pointer text-lg'>✎</span>
+                <span onClick={() => removeProduct(item.id)} className='cursor-pointer text-lg'>X</span>
+                <span onClick={() => navigate(`/edit/${item.id}`)} className='cursor-pointer text-lg'>✎</span>
               </div>
             </div>
           ))

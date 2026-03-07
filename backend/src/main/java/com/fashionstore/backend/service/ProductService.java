@@ -93,4 +93,78 @@ public class ProductService {
 
         return response;
     }
+
+    public Map<String, Object> listProducts() {
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+
+            List<Product> products = productRepository.findAll();
+
+            response.put("success", true);
+            response.put("products", products);
+
+        } catch (Exception e) {
+
+            response.put("success", false);
+            response.put("message", "Lỗi khi lấy danh sách sản phẩm !");
+        }
+
+        return response;
+    }
+
+    public Map<String, Object> singleProduct(Long productId) {
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+
+            Product product = productRepository.findById(productId).orElse(null);
+
+            if (product == null) {
+                response.put("success", false);
+                response.put("message", "Không tìm thấy sản phẩm !");
+                return response;
+            }
+
+            response.put("success", true);
+            response.put("product", product);
+
+        } catch (Exception e) {
+
+            response.put("success", false);
+            response.put("message", "Lỗi khi lấy sản phẩm !");
+        }
+
+        return response;
+    }
+
+    public Map<String, Object> removeProduct(Long productId) {
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+
+            Product product = productRepository.findById(productId).orElse(null);
+
+            if (product == null) {
+                response.put("success", false);
+                response.put("message", "Không tìm thấy sản phẩm !");
+                return response;
+            }
+
+            productRepository.delete(product);
+
+            response.put("success", true);
+            response.put("message", "Xóa sản phẩm thành công !");
+
+        } catch (Exception e) {
+
+            response.put("success", false);
+            response.put("message", "Lỗi khi xóa sản phẩm !");
+        }
+
+        return response;
+    }
 }

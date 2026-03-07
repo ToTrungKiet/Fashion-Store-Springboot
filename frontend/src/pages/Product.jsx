@@ -14,7 +14,7 @@ const Product = () => {
 
   const fetchProductData = async () => {
     products.map((item) => {
-      if (item._id === productId) {
+      if (item.id === Number(productId)) {
         setProductData(item)
         setImage(item.image[0])
         return null;
@@ -65,7 +65,7 @@ const Product = () => {
                 ))}
               </div>
             </div>
-            <button onClick={() => addToCart(productData._id, size)} className='bg-rose-500 hover:bg-rose-600 text-white px-8 py-3 text-sm active:bg-rose-700 rounded-full cursor-pointer'>THÊM VÀO GIỎ HÀNG</button>
+            <button onClick={() => addToCart(productData.id, size)} className='bg-rose-500 hover:bg-rose-600 text-white px-8 py-3 text-sm active:bg-rose-700 rounded-full cursor-pointer'>THÊM VÀO GIỎ HÀNG</button>
             <hr className='mt-8 sm:w-4/5' />
             <div className='text-sm text-gray-500 mt-5 flex flex-col gap-1'>
               <p>100% sản phẩm chính hãng.</p>
