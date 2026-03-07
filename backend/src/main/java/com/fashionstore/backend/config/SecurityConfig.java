@@ -1,6 +1,8 @@
 package com.fashionstore.backend.config;
 
 import com.fashionstore.backend.security.JwtAuthFilter;
+import com.fashionstore.backend.security.JwtAuthAdminFilter;
+
 import org.springframework.context.annotation.*;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -12,10 +14,12 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
+    private final JwtAuthAdminFilter jwtAuthAdminFilter;
 
-    // constructor injection
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter,
+                          JwtAuthAdminFilter jwtAuthAdminFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
+        this.jwtAuthAdminFilter = jwtAuthAdminFilter;
     }
 
     @Bean
@@ -24,13 +28,42 @@ public class SecurityConfig {
         http
             .cors(cors -> {})
             .csrf(csrf -> csrf.disable())
+
             .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/api/user/login").permitAll()
-                    .requestMatchers("/api/user/register").permitAll()
-                    .requestMatchers("/api/user/admin").permitAll()
-                    .anyRequest().authenticated()
+
+                // ===== PUBLIC =====
+                .requestMatchers("/api/user/login").permitAll()
+                .requestMatchers("/api/user/register").permitAll()
+                .requestMatchers("/api/user/admin").permitAll()
+
+                .requestMatchers("/api/product/list").permitAll()
+                .requestMatchers("/api/product/single").permitAll()
+
+                // ===== USER =====
+                .requestMatchers("/api/user/profile").authenticated()
+                .requestMatchers("/api/user/update-profile").authenticated()
+
+                .requestMatchers("/api/cart/**").authenticated()
+
+                .requestMatchers("/api/order/place").authenticated()
+                .requestMatchers("/api/order/user-orders").authenticated()
+
+                // ===== ADMIN =====
+                .requestMatchers("/api/product/add").authenticated()
+                .requestMatchers("/api/product/update").authenticated()
+                .requestMatchers("/api/product/remove").authenticated()
+
+                .requestMatchers("/api/order/list").authenticated()
+                .requestMatchers("/api/order/status").authenticated()
+
+                .anyRequest().authenticated()
             )
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
+            // USER FILTER
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+
+            // ADMIN FILTER
+            .addFilterBefore(jwtAuthAdminFilter, JwtAuthFilter.class);
 
         return http.build();
     }
