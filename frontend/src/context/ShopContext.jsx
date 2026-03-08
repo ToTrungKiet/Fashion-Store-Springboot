@@ -19,6 +19,11 @@ const ShopContextProvider = (props) => {
 
   const addToCart = async (itemId, size) => {
     let cartData = structuredClone(cartItems);
+    if (!token) {
+      toast.error('Vui lòng đăng nhập !')
+      navigate('/login')
+      return;
+    }
     if (!size) {
       toast.error('Vui lòng chọn size !')
       return;
@@ -39,7 +44,7 @@ const ShopContextProvider = (props) => {
 
     if (token) {
       try {
-        await axios.post(backendUrl + '/api/cart/add', {itemId, size}, {headers: {token}});
+        await axios.post(backendUrl + '/api/cart/add', { itemId, size }, { headers: { token } });
       } catch (error) {
         console.log(error);
         toast.error('Lỗi kết nối');
@@ -68,10 +73,10 @@ const ShopContextProvider = (props) => {
     let cartData = structuredClone(cartItems);
     cartData[itemId][size] = quantity;
     setCartItems(cartData);
-    
+
     if (token) {
       try {
-        await axios.post(backendUrl + '/api/cart/update', {itemId, size, quantity}, {headers: {token}});
+        await axios.post(backendUrl + '/api/cart/update', { itemId, size, quantity }, { headers: { token } });
       } catch (error) {
         console.log(error);
         toast.error('Lỗi kết nối');
@@ -82,7 +87,7 @@ const ShopContextProvider = (props) => {
   const getCartAmount = () => {
     let totalAmount = 0;
     for (const items in cartItems) {
-      let itemInfo = products.find((product) => product.id === items);
+      let itemInfo = products.find((product) => product.id.toString() === items.toString());
       for (const item in cartItems[items]) {
         try {
           if (cartItems[items][item] > 0) {
@@ -116,16 +121,20 @@ const ShopContextProvider = (props) => {
 
   const getUserCart = async (token) => {
     try {
-      const response = await axios.post(backendUrl + '/api/cart/get', {}, {headers: {token}});
+      const response = await axios.post(backendUrl + '/api/cart/get', {}, { headers: { token } });
       if (response.data.success) {
-        setCartItems(response.data.cartData);
+        setCartItems(
+          typeof response.data.cartData === "string"
+            ? JSON.parse(response.data.cartData)
+            : response.data.cartData
+        );
       }
     } catch (error) {
       console.log(error);
       toast.error('Lỗi kết nối');
     }
   }
-  
+
   useEffect(() => {
     getProductsData();
   }, [])
