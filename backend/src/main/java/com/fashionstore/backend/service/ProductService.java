@@ -167,4 +167,107 @@ public class ProductService {
 
         return response;
     }
+
+    public Map<String, Object> updateProduct(
+            Long id,
+            String name,
+            String description,
+            Double price,
+            String category,
+            String subCategory,
+            String sizes,
+            String bestseller,
+            MultipartFile image1,
+            MultipartFile image2,
+            MultipartFile image3,
+            MultipartFile image4) {
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+
+            Product product = productRepository.findById(id).orElse(null);
+
+            if (product == null) {
+
+                response.put("success", false);
+                response.put("message", "Không tìm thấy sản phẩm !");
+                return response;
+
+            }
+
+            if (name != null)
+                product.setName(name);
+
+            if (description != null)
+                product.setDescription(description);
+
+            if (price != null)
+                product.setPrice(price);
+
+            if (category != null)
+                product.setCategory(category);
+
+            if (subCategory != null)
+                product.setSubCategory(subCategory);
+
+            if (bestseller != null)
+                product.setBestseller(bestseller.equals("true"));
+
+
+            if (sizes != null) {
+
+                ObjectMapper mapper = new ObjectMapper();
+
+                List<String> sizeList = mapper.readValue(
+                        sizes,
+                        new TypeReference<List<String>>() {
+                        });
+
+                product.setSizes(sizeList);
+
+            }
+
+            List<String> imageUrls = new ArrayList<>();
+
+            List<MultipartFile> images = new ArrayList<>();
+
+            images.add(image1);
+            images.add(image2);
+            images.add(image3);
+            images.add(image4);
+
+            for (MultipartFile image : images) {
+
+                if (image != null && !image.isEmpty()) {
+
+                    String url = cloudinaryService.upload(image);
+
+                    imageUrls.add(url);
+
+                }
+
+            }
+
+            if (!imageUrls.isEmpty()) {
+
+                product.setImage(imageUrls);
+
+            }
+
+            productRepository.save(product);
+
+            response.put("success", true);
+            response.put("message", "Cập nhật sản phẩm thành công !");
+            response.put("product", product);
+
+        } catch (Exception e) {
+
+            response.put("success", false);
+            response.put("message", "Lỗi khi cập nhật sản phẩm !");
+
+        }
+
+        return response;
+    }
 }

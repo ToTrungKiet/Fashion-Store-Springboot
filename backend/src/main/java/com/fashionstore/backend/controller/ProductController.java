@@ -78,4 +78,40 @@ public class ProductController {
 
         return ResponseEntity.ok(result);
     }
+
+    @PostMapping("/update")
+    public ResponseEntity<?> updateProduct(
+
+            @RequestParam Long id,
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String description,
+            @RequestParam(required = false) Double price,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String subCategory,
+            @RequestParam(required = false) String sizes,
+            @RequestParam(required = false) String bestseller,
+
+            @RequestParam(required = false) MultipartFile image1,
+            @RequestParam(required = false) MultipartFile image2,
+            @RequestParam(required = false) MultipartFile image3,
+            @RequestParam(required = false) MultipartFile image4
+
+    ) {
+
+        Map<String, Object> result = productService.updateProduct(
+                id,
+                name,
+                description,
+                price,
+                category,
+                subCategory,
+                sizes,
+                bestseller,
+                image1,
+                image2,
+                image3,
+                image4);
+
+        return ResponseEntity.ok(result);
+    }
 }
