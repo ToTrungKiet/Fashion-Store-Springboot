@@ -83,7 +83,7 @@ const Orders = ({ token }) => {
         <div className="space-y-4">
           {orders.map((order) => (
             <div
-              key={order._id}
+              key={order.id}
               className="grid grid-cols-1 
               lg:grid-cols-[80px_2fr_1.2fr_1fr_1fr] 
               gap-5 items-start 
@@ -101,7 +101,7 @@ const Orders = ({ token }) => {
               {/* Thông tin sản phẩm + khách */}
               <div>
                 <div className="text-sm text-gray-700">
-                  {order.items.map((item, index) => (
+                  {JSON.parse(order.items).map((item, index) => (
                     <p key={index} className="py-1">
                       {item.name} x {item.quantity}
                       <span className="ml-1 text-gray-500">
@@ -113,22 +113,22 @@ const Orders = ({ token }) => {
                 </div>
 
                 <p className="mt-3 mb-2 font-semibold text-gray-800 text-base">
-                  {order.address.firstName} {order.address.lastName}
+                  {JSON.parse(order.address).firstName} {JSON.parse(order.address).lastName}
                 </p>
 
                 <p className="text-gray-500 leading-relaxed">
-                  {order.address.address}, {order.address.ward},{" "}
-                  {order.address.district}, {order.address.city}
+                  {JSON.parse(order.address).address}, {JSON.parse(order.address).ward}, {" "}
+                  {JSON.parse(order.address).district}, {JSON.parse(order.address).city}
                 </p>
 
                 <p className="text-gray-600 mt-1">
-                  {order.address.phone}
+                  {JSON.parse(order.address).phone}
                 </p>
               </div>
 
               {/* Thông tin thanh toán */}
               <div className="text-gray-600 space-y-2 text-sm">
-                <p className="font-medium">Số sản phẩm: {order.items.length}</p>
+                <p className="font-medium">Số sản phẩm: {JSON.parse(order.items).length}</p>
 
                 <p>Phương thức: {order.paymentMethod}</p>
 
@@ -139,7 +139,7 @@ const Orders = ({ token }) => {
                 </p>
 
                 <p>Ngày:{" "}{new Date(order.createdAt).toLocaleDateString("vi-VN")}</p>
-  
+
               </div>
 
               {/* Tổng tiền */}
@@ -161,7 +161,7 @@ const Orders = ({ token }) => {
               <div>
                 <select
                   onChange={(e) =>
-                    statusHandler(e, order._id)
+                    statusHandler(e, order.id)
                   }
                   value={order.status}
                   className="w-full px-3 py-2 rounded-lg border border-gray-300 

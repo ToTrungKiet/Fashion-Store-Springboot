@@ -14,15 +14,15 @@ const Dashboard = ({ token }) => {
   const [recentOrders, setRecentOrders] = useState([])
   const [loading, setLoading] = useState(true)
 
- 
+
   const fetchStats = async () => {
     try {
       setLoading(true)
-      
+
       const productsRes = await axios.get(backendUrl + '/api/product/list')
       const productCount = productsRes.data.success ? productsRes.data.products.length : 0
 
-      const ordersRes = await axios.post(backendUrl + '/api/order/list', {}, {headers: { token }})
+      const ordersRes = await axios.post(backendUrl + '/api/order/list', {}, { headers: { token } })
 
       if (ordersRes.data.success) {
         const orders = ordersRes.data.orders
@@ -192,14 +192,15 @@ const Dashboard = ({ token }) => {
                   <tbody>
                     {recentOrders.map((order, index) => (
                       <tr
-                        key={order._id || index}
+                        key={order.id || index}
                         className='border-b border-gray-100 hover:bg-gray-50 transition-colors'
                       >
                         <td className='px-4 py-4 text-gray-800 font-medium text-sm'>
-                          {order._id.slice(-8).toUpperCase()}
+                          {order.id}
                         </td>
                         <td className='px-4 py-4 text-gray-600 text-sm'>
-                          {order.items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 0}
+                          {JSON.parse(order.items || "[]")
+                            .reduce((sum, item) => sum + (item.quantity || 1), 0)}
                         </td>
                         <td className='px-4 py-4 text-gray-800 font-semibold text-sm'>
                           {formatPrice(order.amount)} {currency}
