@@ -12,12 +12,14 @@ const Orders = () => {
   const loadOrderData = async () => {
     try {
       if (!token) return null;
-      const response = await axios.post(backendUrl + '/api/order/user-orders', {}, { headers: {token}})
+      const response = await axios.post(backendUrl + '/api/order/user-orders', {}, { headers: { token } })
       console.log(response.data.orders)
       if (response.data.success) {
         let allOrdersItem = []
         response.data.orders.map((order) => {
-          order.items.map((item) => {
+          const items = JSON.parse(order.items)
+
+          items.map((item) => {
             item['status'] = order.status
             item['payment'] = order.payment
             item['paymentMethod'] = order.paymentMethod
@@ -28,7 +30,7 @@ const Orders = () => {
         console.log(allOrdersItem)
         setOrderData(allOrdersItem.reverse())
       } else {
-
+        
       }
     } catch (error) {
 
