@@ -1,5 +1,8 @@
 package com.fashionstore.backend.security;
 
+import com.fashionstore.backend.entity.User;
+import com.fashionstore.backend.repository.UserRepository;
+
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
@@ -9,14 +12,16 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.List;
 
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
@@ -24,36 +29,20 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     @Value("${jwt.secret}")
     private String SECRET;
 
+    @Autowired
+    private UserRepository userRepository;
+
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,
             HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
 
-        String path = request.getRequestURI();
-
-        if (!path.equals("/api/user/profile") &&
-                !path.equals("/api/user/update-profile") &&
-                !path.equals("/api/cart/get") &&
-                !path.equals("/api/cart/add") &&
-                !path.equals("/api/cart/update") &&
-                !path.equals("/api/order/place") &&
-                !path.equals("/api/order/user-orders")) {
-
-            filterChain.doFilter(request, response);
-            return;
-        }
-
         String token = request.getHeader("token");
 
         if (token == null) {
 
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
-
-            response.getWriter().write(
-                    "{\"success\":false,\"message\":\"Vui lòng đăng nhập để tiếp tục !\"}");
-
+            filterChain.doFilter(request, response);
             return;
         }
 
@@ -65,14 +54,26 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     .parseClaimsJws(token)
                     .getBody();
 
-            String userId = claims.getSubject();
+            Long userId = Long.parseLong(claims.getSubject());
+
+            User user = userRepository.findById(userId).orElse(null);
+
+            if (user == null) {
+                filterChain.doFilter(request, response);
+                return;
+            }
 
             request.setAttribute("userId", userId);
+
+            List<SimpleGrantedAuthority> authorities = user.getRoles()
+                    .stream()
+                    .map(role -> new SimpleGrantedAuthority(role.getName()))
+                    .toList();
 
             UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                     userId,
                     null,
-                    new ArrayList<>());
+                    authorities);
 
             SecurityContextHolder.getContext().setAuthentication(auth);
 

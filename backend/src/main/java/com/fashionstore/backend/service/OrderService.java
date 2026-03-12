@@ -5,6 +5,9 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import com.fashionstore.backend.entity.Order;
@@ -31,6 +34,19 @@ public class OrderService {
             Double amount) {
 
         Map<String, Object> response = new HashMap<>();
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+        boolean isAdmin = auth.getAuthorities()
+                .stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        // Chặn ADMIN đặt hàng
+        if (isAdmin) {
+            response.put("success", false);
+            response.put("message", "Admin không được phép đặt hàng");
+            return response;
+        }
 
         try {
 

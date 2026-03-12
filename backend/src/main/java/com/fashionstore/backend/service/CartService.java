@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import com.fashionstore.backend.entity.User;
@@ -57,6 +59,19 @@ public class CartService {
     public Map<String, Object> addToCart(Long userId, String itemId, String size) {
 
         Map<String, Object> response = new HashMap<>();
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+        boolean isAdmin = auth.getAuthorities()
+                .stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        // Chặn ADMIN đặt hàng
+        if (isAdmin) {
+            response.put("success", false);
+            response.put("message", "Admin không được thêm sản phẩm !");
+            return response;
+        }
 
         try {
 

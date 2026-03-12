@@ -28,27 +28,37 @@ const ShopContextProvider = (props) => {
       toast.error('Vui lòng chọn size !')
       return;
     }
-    if (cartData[itemId]) {
-      if (cartData[itemId][size]) {
-        cartData[itemId][size] += 1;
-      }
-      else {
+
+    try {
+
+      await axios.post(
+        backendUrl + '/api/cart/add',
+        { itemId, size },
+        { headers: { token } }
+      );
+
+      // chỉ update khi API OK
+      let cartData = structuredClone(cartItems);
+
+      if (cartData[itemId]) {
+        if (cartData[itemId][size]) {
+          cartData[itemId][size] += 1;
+        } else {
+          cartData[itemId][size] = 1;
+        }
+      } else {
+        cartData[itemId] = {};
         cartData[itemId][size] = 1;
       }
-    }
-    else {
-      cartData[itemId] = {};
-      cartData[itemId][size] = 1;
-    }
-    setCartItems(cartData);
 
-    if (token) {
-      try {
-        await axios.post(backendUrl + '/api/cart/add', { itemId, size }, { headers: { token } });
-      } catch (error) {
-        console.log(error);
-        toast.error('Lỗi kết nối');
-      }
+      setCartItems(cartData);
+
+    } catch (error) {
+
+      console.log("Cart API error:", error.response || error);
+
+      toast.error(error.response?.data?.message || 'Admin không được truy cập vào giỏ hàng !');
+
     }
   }
 
@@ -130,8 +140,7 @@ const ShopContextProvider = (props) => {
         );
       }
     } catch (error) {
-      console.log(error);
-      toast.error('Lỗi kết nối');
+
     }
   }
 
