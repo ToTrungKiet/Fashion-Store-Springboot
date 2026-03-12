@@ -71,7 +71,7 @@ const PlaceOrder = () => {
       
     } catch (error) {
         console.log(error);
-        toast.error(error.response?.data?.message || 'Đã có lỗi xảy ra !')
+        toast.error(error.response?.data?.message || 'Admin không có quyền đặt hàng !')
     }
   };
 

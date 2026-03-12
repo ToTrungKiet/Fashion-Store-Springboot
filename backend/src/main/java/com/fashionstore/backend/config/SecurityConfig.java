@@ -1,7 +1,6 @@
 package com.fashionstore.backend.config;
 
 import com.fashionstore.backend.security.JwtAuthFilter;
-import com.fashionstore.backend.security.JwtAuthAdminFilter;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.*;
@@ -16,57 +15,48 @@ public class SecurityConfig {
 
     @Autowired
     private JwtAuthFilter jwtAuthFilter;
-    @Autowired
-    private JwtAuthAdminFilter jwtAuthAdminFilter;
 
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter,
-                          JwtAuthAdminFilter jwtAuthAdminFilter) {
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
-        this.jwtAuthAdminFilter = jwtAuthAdminFilter;
     }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http
-            .cors(cors -> {})
-            .csrf(csrf -> csrf.disable())
+                .cors(cors -> {
+                })
+                .csrf(csrf -> csrf.disable())
 
-            .authorizeHttpRequests(auth -> auth
+                .authorizeHttpRequests(auth -> auth
 
-                // ===== PUBLIC =====
-                .requestMatchers("/api/user/login").permitAll()
-                .requestMatchers("/api/user/register").permitAll()
-                .requestMatchers("/api/user/admin").permitAll()
+                        // ===== PUBLIC =====
+                        .requestMatchers("/api/user/login").permitAll()
+                        .requestMatchers("/api/user/register").permitAll()
+                        .requestMatchers("/api/user/admin").permitAll()
 
-                .requestMatchers("/api/product/list").permitAll()
-                .requestMatchers("/api/product/single").permitAll()
+                        .requestMatchers("/api/product/list").permitAll()
+                        .requestMatchers("/api/product/single").permitAll()
 
-                // ===== USER =====
-                .requestMatchers("/api/user/profile").authenticated()
-                .requestMatchers("/api/user/update-profile").authenticated()
+                        // ===== USER + ADMIN =====
+                        .requestMatchers("/api/user/profile").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+                        .requestMatchers("/api/user/update-profile").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+                        .requestMatchers("/api/cart/**").hasAnyAuthority("ROLE_USER")
+                        .requestMatchers("/api/order/place").hasAnyAuthority("ROLE_USER")
+                        .requestMatchers("/api/order/user-orders").hasAnyAuthority("ROLE_USER")
 
-                .requestMatchers("/api/cart/**").authenticated()
+                        // ===== ADMIN =====
+                        .requestMatchers("/api/product/add").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/api/product/update").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/api/product/remove").hasAuthority("ROLE_ADMIN")
 
-                .requestMatchers("/api/order/place").authenticated()
-                .requestMatchers("/api/order/user-orders").authenticated()
+                        .requestMatchers("/api/order/list").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/api/order/status").hasAuthority("ROLE_ADMIN")
 
-                // ===== ADMIN =====
-                .requestMatchers("/api/product/add").authenticated()
-                .requestMatchers("/api/product/update").authenticated()
-                .requestMatchers("/api/product/remove").authenticated()
+                        .anyRequest().authenticated())
 
-                .requestMatchers("/api/order/list").authenticated()
-                .requestMatchers("/api/order/status").authenticated()
-
-                .anyRequest().authenticated()
-            )
-
-            // USER FILTER
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
-
-            // ADMIN FILTER
-            .addFilterBefore(jwtAuthAdminFilter, JwtAuthFilter.class);
+                // USER FILTER
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
