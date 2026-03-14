@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -31,7 +30,8 @@ public class OrderService {
             Long userId,
             List<Map<String, Object>> items,
             Map<String, Object> address,
-            Double amount) {
+            Double amount,
+            String paymentMethod) {
 
         Map<String, Object> response = new HashMap<>();
 
@@ -41,7 +41,6 @@ public class OrderService {
                 .stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
-        // Chặn ADMIN đặt hàng
         if (isAdmin) {
             response.put("success", false);
             response.put("message", "Admin không được phép đặt hàng");
@@ -49,7 +48,6 @@ public class OrderService {
         }
 
         try {
-
             if (items == null || items.isEmpty()) {
                 response.put("success", false);
                 response.put("message", "Giỏ hàng trống");
@@ -57,28 +55,30 @@ public class OrderService {
             }
 
             Order order = new Order();
-
             order.setUserId(userId);
             order.setItems(objectMapper.writeValueAsString(items));
             order.setAddress(objectMapper.writeValueAsString(address));
             order.setAmount(amount);
-            order.setPaymentMethod("cod");
-            order.setPayment(false);
+            order.setPaymentMethod(paymentMethod);
+
+            if ("vnpay".equalsIgnoreCase(paymentMethod)) {
+                order.setPayment(false);
+                order.setStatus("Chờ thanh toán");
+            } else {
+                order.setPayment(false);
+                order.setStatus("Đơn hàng đã đặt");
+            }
 
             orderRepository.save(order);
 
-            User user = userRepository.findById(userId).orElse(null);
-
-            if (user != null) {
-                user.setCartData("{}");
-                userRepository.save(user);
-            }
+            order.setTransactionRef(String.valueOf(order.getId()));
+            orderRepository.save(order);
 
             response.put("success", true);
-            response.put("message", "Đặt hàng thành công!");
+            response.put("message", "Tạo đơn hàng thành công!");
+            response.put("orderId", order.getId());
 
         } catch (Exception e) {
-
             response.put("success", false);
             response.put("message", e.getMessage());
         }
@@ -86,12 +86,18 @@ public class OrderService {
         return response;
     }
 
-    public Map<String, Object> userOrders(Long userId) {
+    public void clearUserCart(Long userId) {
+        User user = userRepository.findById(userId).orElse(null);
+        if (user != null) {
+            user.setCartData("{}");
+            userRepository.save(user);
+        }
+    }
 
+    public Map<String, Object> userOrders(Long userId) {
         Map<String, Object> response = new HashMap<>();
 
         try {
-
             List<Order> orders = orderRepository.findByUserId(userId);
 
             if (!orders.isEmpty()) {
@@ -103,51 +109,39 @@ public class OrderService {
             }
 
         } catch (Exception e) {
-
             response.put("success", false);
             response.put("message", e.getMessage());
-
         }
 
         return response;
     }
 
     public Map<String, Object> listOrders() {
-
         Map<String, Object> response = new HashMap<>();
 
         try {
-
             List<Order> orders = orderRepository.findAll();
 
             if (!orders.isEmpty()) {
-
                 response.put("success", true);
                 response.put("orders", orders);
-
             } else {
-
                 response.put("success", false);
                 response.put("message", "Không có đơn hàng nào");
-
             }
 
         } catch (Exception e) {
-
             response.put("success", false);
             response.put("message", e.getMessage());
-
         }
 
         return response;
     }
 
     public Map<String, Object> updateStatus(Long orderId, String status) {
-
         Map<String, Object> response = new HashMap<>();
 
         try {
-
             Order order = orderRepository.findById(orderId).orElse(null);
 
             if (order == null) {
@@ -157,14 +151,12 @@ public class OrderService {
             }
 
             order.setStatus(status);
-
             orderRepository.save(order);
 
             response.put("success", true);
             response.put("message", "Cập nhật trạng thái thành công");
 
         } catch (Exception e) {
-
             response.put("success", false);
             response.put("message", e.getMessage());
         }

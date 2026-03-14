@@ -8,6 +8,7 @@ public class PlaceOrderRequest {
     private List<Map<String, Object>> items;
     private Map<String, Object> address;
     private Double amount;
+    private String paymentMethod;
 
     public List<Map<String, Object>> getItems() {
         return items;
@@ -31,5 +32,13 @@ public class PlaceOrderRequest {
 
     public void setAmount(Double amount) {
         this.amount = amount;
+    }
+
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(String paymentMethod) {
+        this.paymentMethod = paymentMethod;
     }
 }
