@@ -2,16 +2,13 @@ package com.fashionstore.backend.security;
 
 import com.fashionstore.backend.entity.User;
 import com.fashionstore.backend.repository.UserRepository;
-
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
-
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -38,16 +35,17 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
 
+        System.out.println("=== JWT FILTER === " + request.getMethod() + " " + request.getRequestURI());
+
         String token = request.getHeader("token");
+        System.out.println("TOKEN HEADER: " + token);
 
-        if (token == null) {
-
+        if (token == null || token.isBlank()) {
             filterChain.doFilter(request, response);
             return;
         }
 
         try {
-
             Claims claims = Jwts.parserBuilder()
                     .setSigningKey(SECRET.getBytes())
                     .build()
@@ -55,10 +53,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     .getBody();
 
             Long userId = Long.parseLong(claims.getSubject());
+            System.out.println("USER ID FROM TOKEN: " + userId);
 
             User user = userRepository.findById(userId).orElse(null);
 
             if (user == null) {
+                System.out.println("USER NOT FOUND");
                 filterChain.doFilter(request, response);
                 return;
             }
@@ -70,30 +70,24 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     .map(role -> new SimpleGrantedAuthority(role.getName()))
                     .toList();
 
-            UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                    userId,
-                    null,
-                    authorities);
+            System.out.println("AUTHORITIES: " + authorities);
 
-            SecurityContextHolder.getContext().setAuthentication(auth);
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(userId, null, authorities);
+
+            SecurityContextHolder.getContext().setAuthentication(authentication);
 
             filterChain.doFilter(request, response);
 
         } catch (ExpiredJwtException e) {
-
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
-
-            response.getWriter().write(
-                    "{\"success\":false,\"message\":\"Token đã hết hạn\"}");
-
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write("{\"success\":false,\"message\":\"Token đã hết hạn\"}");
         } catch (Exception e) {
-
+            e.printStackTrace();
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
-
-            response.getWriter().write(
-                    "{\"success\":false,\"message\":\"" + e.getMessage() + "\"}");
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write("{\"success\":false,\"message\":\"Token không hợp lệ\"}");
         }
     }
 }

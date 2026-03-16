@@ -1,14 +1,15 @@
 package com.fashionstore.backend.config;
 
 import com.fashionstore.backend.security.JwtAuthFilter;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.*;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import jakarta.servlet.DispatcherType;
 
 @Configuration
 public class SecurityConfig {
@@ -30,32 +31,35 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
 
-                        // ===== PUBLIC =====
-                        .requestMatchers("/api/user/login").permitAll()
-                        .requestMatchers("/api/user/register").permitAll()
-                        .requestMatchers("/api/user/admin").permitAll()
+                    .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.FORWARD).permitAll()
+                    .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                    .requestMatchers("/error").permitAll()
+            
+                    .requestMatchers("/api/user/login").permitAll()
+                    .requestMatchers("/api/user/register").permitAll()
+                    .requestMatchers("/api/user/admin").permitAll()
+            
+                    .requestMatchers("/api/product/list").permitAll()
+                    .requestMatchers("/api/product/single").permitAll()
+            
+                    .requestMatchers("/api/payment/vnpay-return").permitAll()
+            
+                    .requestMatchers("/api/user/profile").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+                    .requestMatchers("/api/user/update-profile").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+                    .requestMatchers("/api/cart/**").hasAnyAuthority("ROLE_USER")
+                    .requestMatchers("/api/order/place").hasAnyAuthority("ROLE_USER")
+                    .requestMatchers("/api/order/user-orders").hasAnyAuthority("ROLE_USER")
+                    .requestMatchers("/api/payment/create-vnpay").hasAnyAuthority("ROLE_USER")
+            
+                    .requestMatchers("/api/product/add").hasAuthority("ROLE_ADMIN")
+                    .requestMatchers("/api/product/update").hasAuthority("ROLE_ADMIN")
+                    .requestMatchers("/api/product/remove").hasAuthority("ROLE_ADMIN")
+            
+                    .requestMatchers("/api/order/list").hasAuthority("ROLE_ADMIN")
+                    .requestMatchers("/api/order/status").hasAuthority("ROLE_ADMIN")
+            
+                    .anyRequest().authenticated())
 
-                        .requestMatchers("/api/product/list").permitAll()
-                        .requestMatchers("/api/product/single").permitAll()
-
-                        // ===== USER + ADMIN =====
-                        .requestMatchers("/api/user/profile").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
-                        .requestMatchers("/api/user/update-profile").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
-                        .requestMatchers("/api/cart/**").hasAnyAuthority("ROLE_USER")
-                        .requestMatchers("/api/order/place").hasAnyAuthority("ROLE_USER")
-                        .requestMatchers("/api/order/user-orders").hasAnyAuthority("ROLE_USER")
-
-                        // ===== ADMIN =====
-                        .requestMatchers("/api/product/add").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers("/api/product/update").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers("/api/product/remove").hasAuthority("ROLE_ADMIN")
-
-                        .requestMatchers("/api/order/list").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers("/api/order/status").hasAuthority("ROLE_ADMIN")
-
-                        .anyRequest().authenticated())
-
-                // USER FILTER
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
