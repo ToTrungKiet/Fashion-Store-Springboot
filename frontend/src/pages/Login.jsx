@@ -141,7 +141,9 @@ const Login = () => {
       <div className='w-full flex justify-between text-sm mt-[-8px]'>
 
         <p className='hover:text-rose-600 active:text-rose-700 cursor-pointer'>
-          Quên mật khẩu ?
+          <span onClick={() => navigate('/forgot-password')}>
+            Quên mật khẩu ?
+          </span>
         </p>
 
         {
