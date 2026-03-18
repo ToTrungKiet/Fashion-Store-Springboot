@@ -24,9 +24,19 @@ const Profile = () => {
   const [selectedProvinceCode, setSelectedProvinceCode] = useState("");
   const [selectedDistrictCode, setSelectedDistrictCode] = useState("");
   const [profileLoaded, setProfileLoaded] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: ""
+  });
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handlePasswordChange = (e) => {
+    setPasswordForm({ ...passwordForm, [e.target.name]: e.target.value });
   };
 
   const loadProvinces = async () => {
@@ -222,6 +232,35 @@ const Profile = () => {
 
   };
 
+  const submitChangePassword = async () => {
+    try {
+      if (token) {
+        const res = await axios.post(
+          backendUrl + "/api/user/change-password",
+          passwordForm,
+          {
+            headers: { token }
+          }
+        );
+
+        if (res.data.success) {
+          toast.success(res.data.message);
+          setPasswordForm({
+            currentPassword: "",
+            newPassword: "",
+            confirmPassword: ""
+          });
+          setShowChangePassword(false);
+        } else {
+          toast.error(res.data.message);
+        }
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error("Không thể đổi mật khẩu");
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-6">
 
@@ -320,6 +359,53 @@ const Profile = () => {
       >
         Lưu thông tin
       </button>
+
+      <div className="mt-4">
+        <button
+          onClick={() => setShowChangePassword((prev) => !prev)}
+          className="bg-rose-500 text-white px-6 py-2 rounded"
+        >
+          {showChangePassword ? "Ẩn đổi mật khẩu" : "Đổi mật khẩu"}
+        </button>
+      </div>
+
+      {showChangePassword && (
+        <div className="mt-6 grid grid-cols-1 gap-4 max-w-xl">
+          <input
+            name="currentPassword"
+            value={passwordForm.currentPassword}
+            onChange={handlePasswordChange}
+            type="password"
+            placeholder="Mật khẩu hiện tại"
+            className="border p-3 rounded"
+          />
+
+          <input
+            name="newPassword"
+            value={passwordForm.newPassword}
+            onChange={handlePasswordChange}
+            type="password"
+            placeholder="Mật khẩu mới"
+            className="border p-3 rounded"
+          />
+
+          <input
+            name="confirmPassword"
+            value={passwordForm.confirmPassword}
+            onChange={handlePasswordChange}
+            type="password"
+            placeholder="Xác nhận mật khẩu mới"
+            className="border p-3 rounded"
+          />
+
+          <button
+            onClick={submitChangePassword}
+            className="bg-black text-white px-6 py-2 rounded w-fit"
+          >
+            Xác nhận đổi mật khẩu
+          </button>
+        </div>
+      )}
 
     </div>
   );
