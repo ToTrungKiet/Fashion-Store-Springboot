@@ -17,7 +17,12 @@ const ShopContextProvider = (props) => {
   const [products, setProducts] = useState([]);
   const [token, setToken] = useState('')
 
-  const addToCart = async (itemId, size) => {
+  const parseVariantKey = (variantKey) => {
+    const [size = '', color = ''] = variantKey.split('__');
+    return { size, color };
+  }
+
+  const addToCart = async (itemId, size, color) => {
     let cartData = structuredClone(cartItems);
     if (!token) {
       toast.error('Vui lòng đăng nhập !')
@@ -28,27 +33,33 @@ const ShopContextProvider = (props) => {
       toast.error('Vui lòng chọn size !')
       return;
     }
+    if (!color) {
+      toast.error('Vui lòng chọn màu sắc !')
+      return;
+    }
 
     try {
 
       await axios.post(
         backendUrl + '/api/cart/add',
-        { itemId, size },
+        { itemId, size, color },
         { headers: { token } }
       );
 
       // chỉ update khi API OK
       let cartData = structuredClone(cartItems);
 
+      const variantKey = `${size}__${color}`;
+
       if (cartData[itemId]) {
-        if (cartData[itemId][size]) {
-          cartData[itemId][size] += 1;
+        if (cartData[itemId][variantKey]) {
+          cartData[itemId][variantKey] += 1;
         } else {
-          cartData[itemId][size] = 1;
+          cartData[itemId][variantKey] = 1;
         }
       } else {
         cartData[itemId] = {};
-        cartData[itemId][size] = 1;
+        cartData[itemId][variantKey] = 1;
       }
 
       setCartItems(cartData);
@@ -79,14 +90,27 @@ const ShopContextProvider = (props) => {
     return totalCount;
   }
 
-  const updateQuantity = async (itemId, size, quantity) => {
+  const updateQuantity = async (itemId, size, color, quantity) => {
     let cartData = structuredClone(cartItems);
-    cartData[itemId][size] = quantity;
+    const variantKey = `${size}__${color}`;
+
+    if (!cartData[itemId]) {
+      return;
+    }
+
+    if (quantity <= 0) {
+      delete cartData[itemId][variantKey];
+      if (Object.keys(cartData[itemId]).length === 0) {
+        delete cartData[itemId];
+      }
+    } else {
+      cartData[itemId][variantKey] = quantity;
+    }
     setCartItems(cartData);
 
     if (token) {
       try {
-        await axios.post(backendUrl + '/api/cart/update', { itemId, size, quantity }, { headers: { token } });
+        await axios.post(backendUrl + '/api/cart/update', { itemId, size, color, quantity }, { headers: { token } });
       } catch (error) {
         console.log(error);
         toast.error('Lỗi kết nối');
@@ -101,7 +125,7 @@ const ShopContextProvider = (props) => {
       for (const item in cartItems[items]) {
         try {
           if (cartItems[items][item] > 0) {
-            totalAmount += itemInfo.price * cartItems[items][item];
+            totalAmount += (itemInfo?.price || 0) * cartItems[items][item];
           }
         } catch (e) {
           console.log(e)
@@ -165,7 +189,7 @@ const ShopContextProvider = (props) => {
     search, setSearch, showSearch, setShowSearch,
     cartItems, setCartItems, addToCart, getCartCount,
     updateQuantity, getCartAmount, formatPrice,
-    navigate, backendUrl, token, setToken
+    navigate, backendUrl, token, setToken, parseVariantKey
   }
 
   return (

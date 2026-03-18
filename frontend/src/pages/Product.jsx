@@ -11,12 +11,34 @@ const Product = () => {
   const [productData, setProductData] = useState(false);
   const [image, setImage] = useState('');
   const [size, setSize] = useState('');
+  const [color, setColor] = useState('');
+
+  const colors = ['Đen', 'Trắng', 'Xám'];
+
+  const getVariantStock = (selectedSize, selectedColor) => {
+    if (!productData?.inventory || !selectedSize || !selectedColor) {
+      return 0;
+    }
+
+    return productData.inventory[`${selectedSize}__${selectedColor}`] || 0;
+  };
+
+  const isAvailableColor = (selectedColor) => {
+    if (!size || !productData?.inventory) {
+      return false;
+    }
+    return getVariantStock(size, selectedColor) > 0;
+  };
+
+  const canAddToCart = Boolean(size && color && getVariantStock(size, color) > 0);
 
   const fetchProductData = async () => {
     products.map((item) => {
       if (item.id === Number(productId)) {
         setProductData(item)
         setImage(item.image[0])
+        setSize('')
+        setColor('')
         return null;
       }
     })
@@ -61,11 +83,46 @@ const Product = () => {
               <p>Chọn kích cỡ</p>
               <div className='flex gap-2'>
                 {productData.sizes.map((item, index) => (
-                  <button onClick={() => setSize(item)} className={`border py-2 px-4 bg-gray-100 ${item === size ? 'border-rose-500 text-white bg-rose-400' : ''} cursor-pointer`} key={index}>{item}</button>
+                  <button onClick={() => { setSize(item); setColor(''); }} className={`border py-2 px-4 bg-gray-100 ${item === size ? 'border-rose-500 text-white bg-rose-400' : ''} cursor-pointer`} key={index}>{item}</button>
                 ))}
               </div>
             </div>
-            <button onClick={() => addToCart(productData.id, size)} className='bg-rose-500 hover:bg-rose-600 text-white px-8 py-3 text-sm active:bg-rose-700 rounded-full cursor-pointer'>THÊM VÀO GIỎ HÀNG</button>
+            <div className='flex flex-col gap-4 mb-8'>
+              <p>Chọn màu sắc</p>
+              <div className='flex gap-2 flex-wrap'>
+                {colors.map((item) => {
+                  const available = isAvailableColor(item);
+                  return (
+                    <button
+                      key={item}
+                      onClick={() => available && setColor(item)}
+                      disabled={!available}
+                      className={`border py-2 px-4 rounded-full ${
+                        item === color ? 'border-rose-500 text-white bg-rose-400' : 'bg-gray-100'
+                      } ${!available ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
+                    >
+                      {item}
+                    </button>
+                  );
+                })}
+              </div>
+              {size && color ? (
+                <p className='text-sm text-gray-500'>Tồn kho: {getVariantStock(size, color)}</p>
+              ) : (
+                <p className='text-sm text-gray-400'>Hãy chọn đầy đủ size và màu sắc để mua hàng.</p>
+              )}
+            </div>
+            <button
+              onClick={() => canAddToCart && addToCart(productData.id, size, color)}
+              disabled={!canAddToCart}
+              className={`px-8 py-3 text-sm rounded-full ${
+                canAddToCart
+                  ? 'bg-rose-500 hover:bg-rose-600 text-white active:bg-rose-700 cursor-pointer'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              THÊM VÀO GIỎ HÀNG
+            </button>
             <hr className='mt-8 sm:w-4/5' />
             <div className='text-sm text-gray-500 mt-5 flex flex-col gap-1'>
               <p>100% sản phẩm chính hãng.</p>

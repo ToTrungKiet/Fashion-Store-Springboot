@@ -10,8 +10,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import com.fashionstore.backend.entity.Order;
+import com.fashionstore.backend.entity.Product;
 import com.fashionstore.backend.entity.User;
 import com.fashionstore.backend.repository.OrderRepository;
+import com.fashionstore.backend.repository.ProductRepository;
 import com.fashionstore.backend.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -23,6 +25,9 @@ public class OrderService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private ProductRepository productRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -52,6 +57,43 @@ public class OrderService {
                 response.put("success", false);
                 response.put("message", "Giỏ hàng trống");
                 return response;
+            }
+
+            for (Map<String, Object> item : items) {
+                Long productId = Long.valueOf(String.valueOf(item.get("id")));
+                String size = String.valueOf(item.get("size"));
+                String color = String.valueOf(item.get("color"));
+                Integer quantity = Integer.valueOf(String.valueOf(item.get("quantity")));
+
+                Product product = productRepository.findById(productId).orElse(null);
+
+                if (product == null) {
+                    response.put("success", false);
+                    response.put("message", "Có sản phẩm không còn tồn tại");
+                    return response;
+                }
+
+                String variantKey = buildVariantKey(size, color);
+                int availableStock = product.getInventory().getOrDefault(variantKey, 0);
+
+                if (availableStock < quantity) {
+                    response.put("success", false);
+                    response.put("message", "Sản phẩm " + product.getName() + " không đủ tồn kho");
+                    return response;
+                }
+            }
+
+            for (Map<String, Object> item : items) {
+                Long productId = Long.valueOf(String.valueOf(item.get("id")));
+                String size = String.valueOf(item.get("size"));
+                String color = String.valueOf(item.get("color"));
+                Integer quantity = Integer.valueOf(String.valueOf(item.get("quantity")));
+
+                Product product = productRepository.findById(productId).orElse(null);
+                String variantKey = buildVariantKey(size, color);
+                int availableStock = product.getInventory().getOrDefault(variantKey, 0);
+                product.getInventory().put(variantKey, availableStock - quantity);
+                productRepository.save(product);
             }
 
             Order order = new Order();
@@ -162,5 +204,9 @@ public class OrderService {
         }
 
         return response;
+    }
+
+    private String buildVariantKey(String size, String color) {
+        return size.trim() + "__" + color.trim();
     }
 }

@@ -9,6 +9,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import com.fashionstore.backend.entity.User;
+import com.fashionstore.backend.entity.Product;
+import com.fashionstore.backend.repository.ProductRepository;
 import com.fashionstore.backend.repository.UserRepository;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,6 +21,9 @@ public class CartService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private ProductRepository productRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -56,7 +61,7 @@ public class CartService {
         return response;
     }
 
-    public Map<String, Object> addToCart(Long userId, String itemId, String size) {
+    public Map<String, Object> addToCart(Long userId, String itemId, String size, String color) {
 
         Map<String, Object> response = new HashMap<>();
 
@@ -74,12 +79,25 @@ public class CartService {
         }
 
         try {
+            if (size == null || size.isBlank() || color == null || color.isBlank()) {
+                response.put("success", false);
+                response.put("message", "Vui lòng chọn size và màu sắc !");
+                return response;
+            }
 
             User user = userRepository.findById(userId).orElse(null);
 
             if (user == null) {
                 response.put("success", false);
                 response.put("message", "User không tồn tại");
+                return response;
+            }
+
+            Product product = productRepository.findById(Long.parseLong(itemId)).orElse(null);
+
+            if (product == null) {
+                response.put("success", false);
+                response.put("message", "Sản phẩm không tồn tại");
                 return response;
             }
 
@@ -97,23 +115,33 @@ public class CartService {
                         });
             }
 
+            String variantKey = buildVariantKey(size, color);
+            int availableStock = product.getInventory().getOrDefault(variantKey, 0);
+            int currentQuantity = cartData.getOrDefault(itemId, new HashMap<>()).getOrDefault(variantKey, 0);
+
+            if (currentQuantity + 1 > availableStock) {
+                response.put("success", false);
+                response.put("message", "Số lượng vượt quá tồn kho !");
+                return response;
+            }
+
             if (cartData.containsKey(itemId)) {
 
                 Map<String, Integer> sizeMap = cartData.get(itemId);
 
-                if (sizeMap.containsKey(size)) {
+                if (sizeMap.containsKey(variantKey)) {
 
-                    sizeMap.put(size, sizeMap.get(size) + 1);
+                    sizeMap.put(variantKey, sizeMap.get(variantKey) + 1);
 
                 } else {
 
-                    sizeMap.put(size, 1);
+                    sizeMap.put(variantKey, 1);
                 }
 
             } else {
 
                 Map<String, Integer> sizeMap = new HashMap<>();
-                sizeMap.put(size, 1);
+                sizeMap.put(variantKey, 1);
 
                 cartData.put(itemId, sizeMap);
             }
@@ -136,17 +164,30 @@ public class CartService {
         return response;
     }
 
-    public Map<String, Object> updateCart(Long userId, String itemId, String size, Integer quantity) {
+    public Map<String, Object> updateCart(Long userId, String itemId, String size, String color, Integer quantity) {
 
         Map<String, Object> response = new HashMap<>();
 
         try {
+            if (size == null || size.isBlank() || color == null || color.isBlank()) {
+                response.put("success", false);
+                response.put("message", "Thiếu biến thể sản phẩm");
+                return response;
+            }
 
             User user = userRepository.findById(userId).orElse(null);
 
             if (user == null) {
                 response.put("success", false);
                 response.put("message", "User không tồn tại");
+                return response;
+            }
+
+            Product product = productRepository.findById(Long.parseLong(itemId)).orElse(null);
+
+            if (product == null) {
+                response.put("success", false);
+                response.put("message", "Sản phẩm không tồn tại");
                 return response;
             }
 
@@ -164,11 +205,28 @@ public class CartService {
                         });
             }
 
+            String variantKey = buildVariantKey(size, color);
+            int availableStock = product.getInventory().getOrDefault(variantKey, 0);
+
+            if (quantity > availableStock) {
+                response.put("success", false);
+                response.put("message", "Số lượng vượt quá tồn kho !");
+                return response;
+            }
+
             if (cartData.containsKey(itemId)) {
 
                 Map<String, Integer> sizeMap = cartData.get(itemId);
 
-                sizeMap.put(size, quantity);
+                if (quantity <= 0) {
+                    sizeMap.remove(variantKey);
+                } else {
+                    sizeMap.put(variantKey, quantity);
+                }
+
+                if (sizeMap.isEmpty()) {
+                    cartData.remove(itemId);
+                }
 
             }
 
@@ -188,5 +246,9 @@ public class CartService {
         }
 
         return response;
+    }
+
+    private String buildVariantKey(String size, String color) {
+        return size.trim() + "__" + color.trim();
     }
 }

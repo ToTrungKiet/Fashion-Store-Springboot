@@ -39,7 +39,7 @@ public class CartController {
 
         Long userId = Long.parseLong(request.getAttribute("userId").toString());
 
-        Map<String, Object> result = cartService.addToCart(userId, req.getItemId(), req.getSize());
+        Map<String, Object> result = cartService.addToCart(userId, req.getItemId(), req.getSize(), req.getColor());
 
         return ResponseEntity.ok(result);
     }
@@ -55,6 +55,7 @@ public class CartController {
                 userId,
                 req.getItemId(),
                 req.getSize(),
+                req.getColor(),
                 req.getQuantity());
 
         return ResponseEntity.ok(result);

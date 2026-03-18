@@ -6,7 +6,7 @@ import CartTotal from '../components/CartTotal';
 
 const Cart = () => {
 
-  const { products, currency, cartItems, updateQuantity, formatPrice, navigate } = useContext(ShopContext);
+  const { products, currency, cartItems, updateQuantity, formatPrice, navigate, parseVariantKey } = useContext(ShopContext);
   const [cartData, setCartData] = useState([]);
 
   useEffect(() => {
@@ -15,9 +15,11 @@ const Cart = () => {
       for (const items in cartItems) {
         for (const item in cartItems[items]) {
           if (cartItems[items][item] > 0) {
+            const { size, color } = parseVariantKey(item);
             tempData.push({
               _id: items,
-              size: item,
+              size,
+              color,
               quantity: cartItems[items][item]
             })
           }
@@ -52,11 +54,12 @@ const Cart = () => {
                     <div className='flex items-center gap-5 mt-2'>
                       <p>{formatPrice(productData.price)} {currency}</p>
                       <p className='px-2 sm:px-3 sm:py-1 border bg-slate-50'>{item.size}</p>
+                      <p className='px-2 sm:px-3 sm:py-1 border bg-slate-50'>{item.color}</p>
                     </div>
                   </div>
                 </div>
-                <input onChange={(e) => e.target.value === '' || e.target.value === '0' ? null : updateQuantity(item._id.toString(), item.size, Number(e.target.value))} className='border max-w-10 sm:max-w-20 px-1 sm:px-2 py-1' type='number' min={1} value={item.quantity} />
-                <img onClick={() => updateQuantity(item._id.toString(), item.size, 0)} className='w-4 mr-4 sm:w-5 cursor-pointer' src={assets.bin_icon} alt='' />
+                <input onChange={(e) => e.target.value === '' || e.target.value === '0' ? null : updateQuantity(item._id.toString(), item.size, item.color, Number(e.target.value))} className='border max-w-10 sm:max-w-20 px-1 sm:px-2 py-1' type='number' min={1} value={item.quantity} />
+                <img onClick={() => updateQuantity(item._id.toString(), item.size, item.color, 0)} className='w-4 mr-4 sm:w-5 cursor-pointer' src={assets.bin_icon} alt='' />
               </div>
             )
           })

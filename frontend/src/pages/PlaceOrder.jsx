@@ -14,7 +14,8 @@ const PlaceOrder = () => {
     setCartItems,
     getCartAmount,
     delivery_fee,
-    products
+    products,
+    parseVariantKey
   } = useContext(ShopContext)
 
   const [method, setMethod] = useState('cod')
@@ -45,12 +46,14 @@ const PlaceOrder = () => {
       for (const items in cartItems) {
         for (const item in cartItems[items]) {
           if (cartItems[items][item] > 0) {
+            const { size, color } = parseVariantKey(item)
             const itemInfo = structuredClone(
               products.find((product) => product.id === Number(items))
             )
 
             if (itemInfo) {
-              itemInfo.size = item
+              itemInfo.size = size
+              itemInfo.color = color
               itemInfo.quantity = cartItems[items][item]
               orderItems.push(itemInfo)
             }

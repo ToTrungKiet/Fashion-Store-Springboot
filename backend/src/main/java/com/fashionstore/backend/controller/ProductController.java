@@ -26,6 +26,7 @@ public class ProductController {
             @RequestParam String category,
             @RequestParam String subCategory,
             @RequestParam String sizes,
+            @RequestParam(required = false) String inventoryData,
             @RequestParam String bestseller,
 
             @RequestParam(required = false) MultipartFile image1,
@@ -42,6 +43,7 @@ public class ProductController {
                 category,
                 subCategory,
                 sizes,
+                inventoryData,
                 bestseller,
                 image1,
                 image2,
@@ -89,6 +91,7 @@ public class ProductController {
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String subCategory,
             @RequestParam(required = false) String sizes,
+            @RequestParam(required = false) String inventoryData,
             @RequestParam(required = false) String bestseller,
 
             @RequestParam(required = false) MultipartFile image1,
@@ -106,11 +109,22 @@ public class ProductController {
                 category,
                 subCategory,
                 sizes,
+                inventoryData,
                 bestseller,
                 image1,
                 image2,
                 image3,
                 image4);
+
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/update-inventory")
+    public ResponseEntity<?> updateInventory(@RequestBody Map<String, Object> body) {
+        Long productId = Long.valueOf(String.valueOf(body.get("productId")));
+        Map<String, Integer> inventory = (Map<String, Integer>) body.get("inventory");
+
+        Map<String, Object> result = productService.updateInventory(productId, inventory);
 
         return ResponseEntity.ok(result);
     }
