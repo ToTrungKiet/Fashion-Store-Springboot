@@ -7,7 +7,7 @@ import RelatedProducts from '../components/RelatedProducts'
 const Product = () => {
 
   const { productId } = useParams();
-  const { products, currency, addToCart, formatPrice } = useContext(ShopContext);
+  const { products, currency, addToCart, formatPrice, getCartVariantQuantity } = useContext(ShopContext);
   const [productData, setProductData] = useState(false);
   const [image, setImage] = useState('');
   const [size, setSize] = useState('');
@@ -30,7 +30,12 @@ const Product = () => {
     return getVariantStock(size, selectedColor) > 0;
   };
 
-  const canAddToCart = Boolean(size && color && getVariantStock(size, color) > 0);
+  const selectedVariantStock = size && color ? getVariantStock(size, color) : 0;
+  const selectedVariantCartQuantity = size && color
+    ? getCartVariantQuantity(productData?.id, size, color)
+    : 0;
+  const remainingStock = Math.max(selectedVariantStock - selectedVariantCartQuantity, 0);
+  const canAddToCart = Boolean(size && color && remainingStock > 0);
 
   const fetchProductData = async () => {
     products.map((item) => {
@@ -107,7 +112,9 @@ const Product = () => {
                 })}
               </div>
               {size && color ? (
-                <p className='text-sm text-gray-500'>Tồn kho: {getVariantStock(size, color)}</p>
+                <p className='text-sm text-gray-500'>
+                  Tồn kho: {selectedVariantStock} | Đã có trong giỏ: {selectedVariantCartQuantity} | Có thể thêm: {remainingStock}
+                </p>
               ) : (
                 <p className='text-sm text-gray-400'>Hãy chọn đầy đủ size và màu sắc để mua hàng.</p>
               )}

@@ -65,6 +65,26 @@ public class PaymentController {
                 return response;
             }
 
+            Long userId = Long.parseLong(request.getAttribute("userId").toString());
+
+            if (!order.getUserId().equals(userId)) {
+                response.put("success", false);
+                response.put("message", "Bạn không có quyền thanh toán đơn hàng này");
+                return response;
+            }
+
+            if (!"vnpay".equalsIgnoreCase(order.getPaymentMethod())) {
+                response.put("success", false);
+                response.put("message", "Đơn hàng này không sử dụng VNPAY");
+                return response;
+            }
+
+            if (Boolean.TRUE.equals(order.getPayment())) {
+                response.put("success", false);
+                response.put("message", "Đơn hàng này đã được thanh toán");
+                return response;
+            }
+
             String paymentUrl = vnPayService.createPaymentUrl(order.getId(), order.getAmount(), request);
 
             response.put("success", true);
@@ -105,7 +125,7 @@ public class PaymentController {
                 order.setStatus("Đơn hàng đã đặt");
                 orderRepository.save(order);
 
-                orderService.clearUserCart(order.getUserId());
+                orderService.removeOrderedItemsFromCart(order.getUserId(), order.getItems());
 
                 response.sendRedirect(frontendUrl + "/orders?payment=success");
             } else {

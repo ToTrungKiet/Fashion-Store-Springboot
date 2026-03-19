@@ -121,7 +121,8 @@ public class CartService {
 
             if (currentQuantity + 1 > availableStock) {
                 response.put("success", false);
-                response.put("message", "Số lượng vượt quá tồn kho !");
+                response.put("availableStock", availableStock);
+                response.put("message", buildInsufficientStockMessage(availableStock));
                 return response;
             }
 
@@ -154,6 +155,7 @@ public class CartService {
 
             response.put("success", true);
             response.put("message", "Đã thêm vào giỏ hàng!");
+            response.put("cartData", cartData);
 
         } catch (Exception e) {
 
@@ -172,6 +174,12 @@ public class CartService {
             if (size == null || size.isBlank() || color == null || color.isBlank()) {
                 response.put("success", false);
                 response.put("message", "Thiếu biến thể sản phẩm");
+                return response;
+            }
+
+            if (quantity == null) {
+                response.put("success", false);
+                response.put("message", "Số lượng không hợp lệ");
                 return response;
             }
 
@@ -210,7 +218,8 @@ public class CartService {
 
             if (quantity > availableStock) {
                 response.put("success", false);
-                response.put("message", "Số lượng vượt quá tồn kho !");
+                response.put("availableStock", availableStock);
+                response.put("message", buildInsufficientStockMessage(availableStock));
                 return response;
             }
 
@@ -238,6 +247,7 @@ public class CartService {
 
             response.put("success", true);
             response.put("message", "Đã cập nhật giỏ hàng!");
+            response.put("cartData", cartData);
 
         } catch (Exception e) {
 
@@ -250,5 +260,13 @@ public class CartService {
 
     private String buildVariantKey(String size, String color) {
         return size.trim() + "__" + color.trim();
+    }
+
+    private String buildInsufficientStockMessage(int availableStock) {
+        if (availableStock <= 0) {
+            return "Sản phẩm này hiện đã hết hàng.";
+        }
+
+        return "Số lượng còn lại không đủ. Chỉ còn " + availableStock + " sản phẩm.";
     }
 }
