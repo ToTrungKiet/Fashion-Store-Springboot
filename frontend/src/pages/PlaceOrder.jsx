@@ -1,9 +1,12 @@
-import { useContext, useState } from 'react'
+import { useContext, useEffect, useMemo, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import Title from '../components/Title'
 import CartTotal from '../components/CartTotal'
 import { ShopContext } from '../context/ShopContext'
 import { toast } from 'react-toastify'
 import axios from 'axios'
+
+const LOCATION_API_BASE = 'https://provinces.open-api.vn/api/v1'
 
 const PlaceOrder = () => {
   const {
@@ -11,11 +14,13 @@ const PlaceOrder = () => {
     backendUrl,
     token,
     cartItems,
-    setCartItems,
     getCartAmount,
     delivery_fee,
-    products
+    products,
+    parseVariantKey,
+    getUserCart
   } = useContext(ShopContext)
+  const location = useLocation()
 
   const [method, setMethod] = useState('cod')
 
@@ -29,6 +34,213 @@ const PlaceOrder = () => {
     city: '',
     phone: ''
   })
+  const [provinces, setProvinces] = useState([])
+  const [districts, setDistricts] = useState([])
+  const [wards, setWards] = useState([])
+  const [selectedProvinceCode, setSelectedProvinceCode] = useState('')
+  const [selectedDistrictCode, setSelectedDistrictCode] = useState('')
+  const [profileLoaded, setProfileLoaded] = useState(false)
+
+  const selectedItemsFromCart = location.state?.selectedItems || null
+
+  const orderItems = useMemo(() => {
+    const items = []
+
+    if (selectedItemsFromCart && selectedItemsFromCart.length > 0) {
+      selectedItemsFromCart.forEach((selectedItem) => {
+        const product = products.find((entry) => entry.id.toString() === selectedItem.productId.toString())
+
+        if (!product) {
+          return
+        }
+
+        const { size, color } = parseVariantKey(selectedItem.variantKey)
+        const itemInfo = structuredClone(product)
+        itemInfo.size = size
+        itemInfo.color = color
+        itemInfo.quantity = selectedItem.quantity
+        items.push(itemInfo)
+      })
+
+      return items
+    }
+
+    for (const itemsKey in cartItems) {
+      for (const variantKey in cartItems[itemsKey]) {
+        if (cartItems[itemsKey][variantKey] > 0) {
+          const { size, color } = parseVariantKey(variantKey)
+          const itemInfo = structuredClone(
+            products.find((product) => product.id === Number(itemsKey))
+          )
+
+          if (itemInfo) {
+            itemInfo.size = size
+            itemInfo.color = color
+            itemInfo.quantity = cartItems[itemsKey][variantKey]
+            items.push(itemInfo)
+          }
+        }
+      }
+    }
+
+    return items
+  }, [cartItems, parseVariantKey, products, selectedItemsFromCart])
+
+  const orderSubtotal = useMemo(
+    () => orderItems.reduce((total, item) => total + ((item.price || 0) * (item.quantity || 0)), 0),
+    [orderItems]
+  )
+
+  const loadProvinces = async () => {
+    try {
+      const response = await axios.get(LOCATION_API_BASE + '/p/')
+      setProvinces(response.data || [])
+    } catch (error) {
+      console.log(error)
+      toast.error('Không thể tải danh sách tỉnh/thành')
+    }
+  }
+
+  const loadDistricts = async (provinceCode) => {
+    if (!provinceCode) {
+      setDistricts([])
+      setWards([])
+      setSelectedDistrictCode('')
+      return
+    }
+
+    try {
+      const response = await axios.get(LOCATION_API_BASE + `/p/${provinceCode}?depth=2`)
+      setDistricts(response.data?.districts || [])
+    } catch (error) {
+      console.log(error)
+      toast.error('Không thể tải danh sách quận/huyện')
+    }
+  }
+
+  const loadWards = async (districtCode) => {
+    if (!districtCode) {
+      setWards([])
+      return
+    }
+
+    try {
+      const response = await axios.get(LOCATION_API_BASE + `/d/${districtCode}?depth=2`)
+      setWards(response.data?.wards || [])
+    } catch (error) {
+      console.log(error)
+      toast.error('Không thể tải danh sách phường/xã')
+    }
+  }
+
+  const handleProvinceChange = async (e) => {
+    const provinceCode = e.target.value
+    const province = provinces.find((item) => item.code.toString() === provinceCode)
+
+    setSelectedProvinceCode(provinceCode)
+    setSelectedDistrictCode('')
+    setFormData((prev) => ({
+      ...prev,
+      city: province?.name || '',
+      district: '',
+      ward: ''
+    }))
+    setWards([])
+
+    await loadDistricts(provinceCode)
+  }
+
+  const handleDistrictChange = async (e) => {
+    const districtCode = e.target.value
+    const district = districts.find((item) => item.code.toString() === districtCode)
+
+    setSelectedDistrictCode(districtCode)
+    setFormData((prev) => ({
+      ...prev,
+      district: district?.name || '',
+      ward: ''
+    }))
+
+    await loadWards(districtCode)
+  }
+
+  const handleWardChange = (e) => {
+    const wardCode = e.target.value
+    const ward = wards.find((item) => item.code.toString() === wardCode)
+
+    setFormData((prev) => ({
+      ...prev,
+      ward: ward?.name || ''
+    }))
+  }
+
+  useEffect(() => {
+    loadProvinces()
+  }, [])
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!token) {
+        return
+      }
+
+      try {
+        const response = await axios.post(
+          backendUrl + '/api/user/profile',
+          {},
+          { headers: { token } }
+        )
+
+        if (!response.data?.success) {
+          return
+        }
+
+        const user = response.data.user || {}
+
+        setFormData({
+          firstName: user.firstName || '',
+          lastName: user.lastName || '',
+          email: user.email || '',
+          address: user.address || '',
+          ward: user.ward || '',
+          district: user.district || '',
+          city: user.city || '',
+          phone: user.phone || ''
+        })
+        setProfileLoaded(true)
+      } catch (error) {
+        console.log(error)
+      }
+    }
+
+    loadProfile()
+  }, [backendUrl, token])
+
+  useEffect(() => {
+    if (!profileLoaded || provinces.length === 0 || !formData.city) {
+      return
+    }
+
+    const matchedProvince = provinces.find((item) => item.name === formData.city)
+
+    if (matchedProvince) {
+      setSelectedProvinceCode(matchedProvince.code.toString())
+      loadDistricts(matchedProvince.code.toString())
+    }
+  }, [profileLoaded, provinces, formData.city])
+
+  useEffect(() => {
+    if (!profileLoaded || districts.length === 0 || !formData.district) {
+      return
+    }
+
+    const matchedDistrict = districts.find((item) => item.name === formData.district)
+
+    if (matchedDistrict) {
+      setSelectedDistrictCode(matchedDistrict.code.toString())
+      loadWards(matchedDistrict.code.toString())
+    }
+  }, [profileLoaded, districts, formData.district])
 
   const onChangeHandler = (e) => {
     const name = e.target.name
@@ -40,24 +252,6 @@ const PlaceOrder = () => {
     e.preventDefault()
 
     try {
-      let orderItems = []
-
-      for (const items in cartItems) {
-        for (const item in cartItems[items]) {
-          if (cartItems[items][item] > 0) {
-            const itemInfo = structuredClone(
-              products.find((product) => product.id === Number(items))
-            )
-
-            if (itemInfo) {
-              itemInfo.size = item
-              itemInfo.quantity = cartItems[items][item]
-              orderItems.push(itemInfo)
-            }
-          }
-        }
-      }
-
       if (orderItems.length === 0) {
         toast.error('Giỏ hàng trống!')
         return
@@ -66,7 +260,7 @@ const PlaceOrder = () => {
       const orderData = {
         address: formData,
         items: orderItems,
-        amount: getCartAmount() + delivery_fee,
+        amount: orderSubtotal + delivery_fee,
         paymentMethod: method
       }
 
@@ -79,7 +273,7 @@ const PlaceOrder = () => {
           )
 
           if (codResponse.data.success) {
-            setCartItems({})
+            await getUserCart(token)
             toast.success(codResponse.data.message)
             navigate('/orders')
           } else {
@@ -184,36 +378,51 @@ const PlaceOrder = () => {
           required
         />
 
-        <div className='flex gap-3'>
-          <input
-            onChange={onChangeHandler}
-            name='ward'
-            value={formData.ward}
-            className='border border-gray-300 rounded py-1.5 px-3.5 w-full'
-            type='text'
-            placeholder='Phường/Xã'
-            required
-          />
-          <input
-            onChange={onChangeHandler}
-            name='district'
-            value={formData.district}
-            className='border border-gray-300 rounded py-1.5 px-3.5 w-full'
-            type='text'
-            placeholder='Quận/Huyện'
-            required
-          />
-        </div>
-
-        <input
-          onChange={onChangeHandler}
-          name='city'
-          value={formData.city}
-          className='border border-gray-300 rounded py-1.5 px-3.5 w-full'
-          type='text'
-          placeholder='Tỉnh/Thành phố'
+        <select
+          value={selectedProvinceCode}
+          onChange={handleProvinceChange}
+          className='border border-gray-300 rounded py-1.5 px-3.5 w-full bg-white'
           required
-        />
+        >
+          <option value=''>Chọn Tỉnh/Thành phố</option>
+          {provinces.map((province) => (
+            <option key={province.code} value={province.code}>
+              {province.name}
+            </option>
+          ))}
+        </select>
+
+        <div className='flex gap-3'>
+          <select
+            value={selectedDistrictCode}
+            onChange={handleDistrictChange}
+            className='border border-gray-300 rounded py-1.5 px-3.5 w-full bg-white'
+            disabled={!selectedProvinceCode}
+            required
+          >
+            <option value=''>Chọn Quận/Huyện</option>
+            {districts.map((district) => (
+              <option key={district.code} value={district.code}>
+                {district.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={wards.find((ward) => ward.name === formData.ward)?.code || ''}
+            onChange={handleWardChange}
+            className='border border-gray-300 rounded py-1.5 px-3.5 w-full bg-white'
+            disabled={!selectedDistrictCode}
+            required
+          >
+            <option value=''>Chọn Phường/Xã</option>
+            {wards.map((ward) => (
+              <option key={ward.code} value={ward.code}>
+                {ward.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
         <input
           onChange={onChangeHandler}
@@ -232,6 +441,18 @@ const PlaceOrder = () => {
         <div className='mt-8 min-w-80'>
           <CartTotal />
         </div>
+        {selectedItemsFromCart && selectedItemsFromCart.length > 0 && (
+          <div className='mt-4 rounded border border-gray-200 p-4 text-sm text-gray-700'>
+            <div className='flex justify-between'>
+              <span>Tạm tính đơn đã chọn</span>
+              <span>{orderSubtotal.toLocaleString('vi-VN')} VND</span>
+            </div>
+            <div className='flex justify-between mt-2'>
+              <span>Tổng thanh toán</span>
+              <span>{(orderSubtotal + delivery_fee).toLocaleString('vi-VN')} VND</span>
+            </div>
+          </div>
+        )}
 
         <div className='mt-12'>
           <Title text1={'PHƯƠNG THỨC'} text2={'THANH TOÁN'} />

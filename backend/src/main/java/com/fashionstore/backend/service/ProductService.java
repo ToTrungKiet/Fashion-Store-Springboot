@@ -2,6 +2,7 @@ package com.fashionstore.backend.service;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -20,6 +21,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @RequiredArgsConstructor
 public class ProductService {
 
+    private static final List<String> DEFAULT_COLORS = List.of("Đen", "Trắng", "Xám");
+
     @Autowired
     private ProductRepository productRepository;
     @Autowired
@@ -32,6 +35,7 @@ public class ProductService {
             String category,
             String subCategory,
             String sizes,
+            String inventoryData,
             String bestseller,
             MultipartFile image1,
             MultipartFile image2,
@@ -78,6 +82,7 @@ public class ProductService {
             product.setBestseller(bestseller.equals("true"));
             product.setSizes(sizeList);
             product.setImage(imageUrls);
+            product.setInventory(parseInventory(inventoryData, sizeList));
 
             productRepository.save(product);
 
@@ -176,6 +181,7 @@ public class ProductService {
             String category,
             String subCategory,
             String sizes,
+            String inventoryData,
             String bestseller,
             MultipartFile image1,
             MultipartFile image2,
@@ -228,6 +234,12 @@ public class ProductService {
 
             }
 
+            if (inventoryData != null) {
+                product.setInventory(parseInventory(
+                        inventoryData,
+                        product.getSizes() == null ? List.of() : product.getSizes()));
+            }
+
             List<String> imageUrls = new ArrayList<>();
 
             List<MultipartFile> images = new ArrayList<>();
@@ -269,5 +281,95 @@ public class ProductService {
         }
 
         return response;
+    }
+
+    public Map<String, Object> updateInventory(Long productId, Map<String, Integer> inventoryData) {
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            Product product = productRepository.findById(productId).orElse(null);
+
+            if (product == null) {
+                response.put("success", false);
+                response.put("message", "Không tìm thấy sản phẩm !");
+                return response;
+            }
+
+            List<String> baseSizes = product.getSizes() == null ? List.of() : product.getSizes();
+            Map<String, Integer> normalizedInventory = parseInventoryMap(inventoryData, baseSizes);
+            product.setInventory(normalizedInventory);
+            productRepository.save(product);
+
+            response.put("success", true);
+            response.put("message", "Cập nhật tồn kho thành công !");
+            response.put("product", product);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "Lỗi khi cập nhật tồn kho !");
+        }
+
+        return response;
+    }
+
+    private Map<String, Integer> parseInventory(String inventoryData, List<String> sizes) {
+        Map<String, Integer> normalizedInventory = initializeInventory(sizes);
+
+        if (inventoryData == null || inventoryData.isBlank()) {
+            return normalizedInventory;
+        }
+
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, Object> rawInventory = mapper.readValue(
+                    inventoryData,
+                    new TypeReference<Map<String, Object>>() {
+                    });
+
+            for (Map.Entry<String, Object> entry : rawInventory.entrySet()) {
+                String variantKey = entry.getKey();
+                int quantity = Integer.parseInt(String.valueOf(entry.getValue()));
+
+                if (normalizedInventory.containsKey(variantKey)) {
+                    normalizedInventory.put(variantKey, Math.max(quantity, 0));
+                }
+            }
+
+            return normalizedInventory;
+        } catch (Exception e) {
+            throw new RuntimeException("Dữ liệu tồn kho không hợp lệ !");
+        }
+    }
+
+    private Map<String, Integer> parseInventoryMap(Map<String, Integer> inventoryData, List<String> sizes) {
+        Map<String, Integer> normalizedInventory = initializeInventory(sizes);
+
+        if (inventoryData == null || inventoryData.isEmpty()) {
+          return normalizedInventory;
+        }
+
+        for (Map.Entry<String, Integer> entry : inventoryData.entrySet()) {
+            if (normalizedInventory.containsKey(entry.getKey())) {
+                normalizedInventory.put(entry.getKey(), Math.max(entry.getValue() == null ? 0 : entry.getValue(), 0));
+            }
+        }
+
+        return normalizedInventory;
+    }
+
+    private Map<String, Integer> initializeInventory(List<String> sizes) {
+        Map<String, Integer> normalizedInventory = new LinkedHashMap<>();
+
+        for (String size : sizes) {
+            for (String color : DEFAULT_COLORS) {
+                normalizedInventory.put(buildVariantKey(size, color), 0);
+            }
+        }
+
+        return normalizedInventory;
+    }
+
+    private String buildVariantKey(String size, String color) {
+        return size.trim() + "__" + color.trim();
     }
 }

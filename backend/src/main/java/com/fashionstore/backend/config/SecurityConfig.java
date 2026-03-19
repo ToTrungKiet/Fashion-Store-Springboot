@@ -38,6 +38,8 @@ public class SecurityConfig {
                     .requestMatchers("/api/user/login").permitAll()
                     .requestMatchers("/api/user/register").permitAll()
                     .requestMatchers("/api/user/admin").permitAll()
+                    .requestMatchers("/api/user/forgot-password").permitAll()
+                    .requestMatchers("/api/user/reset-password").permitAll()
             
                     .requestMatchers("/api/product/list").permitAll()
                     .requestMatchers("/api/product/single").permitAll()
@@ -46,6 +48,7 @@ public class SecurityConfig {
             
                     .requestMatchers("/api/user/profile").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
                     .requestMatchers("/api/user/update-profile").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+                    .requestMatchers("/api/user/change-password").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
                     .requestMatchers("/api/cart/**").hasAnyAuthority("ROLE_USER")
                     .requestMatchers("/api/order/place").hasAnyAuthority("ROLE_USER")
                     .requestMatchers("/api/order/user-orders").hasAnyAuthority("ROLE_USER")

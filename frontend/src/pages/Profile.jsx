@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext } from "react";
 import axios from "axios";
 import { ShopContext } from "../context/ShopContext";
+import { toast } from "react-toastify";
+
+const LOCATION_API_BASE = "https://provinces.open-api.vn/api/v1";
 
 const Profile = () => {
-
-  const { token } = useContext(ShopContext)
+  const { token, backendUrl } = useContext(ShopContext)
 
   const [form, setForm] = useState({
     firstName: "",
@@ -16,9 +18,108 @@ const Profile = () => {
     city: "",
     phone: ""
   });
+  const [provinces, setProvinces] = useState([]);
+  const [districts, setDistricts] = useState([]);
+  const [wards, setWards] = useState([]);
+  const [selectedProvinceCode, setSelectedProvinceCode] = useState("");
+  const [selectedDistrictCode, setSelectedDistrictCode] = useState("");
+  const [profileLoaded, setProfileLoaded] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: ""
+  });
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handlePasswordChange = (e) => {
+    setPasswordForm({ ...passwordForm, [e.target.name]: e.target.value });
+  };
+
+  const loadProvinces = async () => {
+    try {
+      const res = await axios.get(LOCATION_API_BASE + "/p/");
+      setProvinces(res.data || []);
+    } catch (error) {
+      console.log(error);
+      toast.error("Không thể tải danh sách tỉnh/thành");
+    }
+  };
+
+  const loadDistricts = async (provinceCode) => {
+    if (!provinceCode) {
+      setDistricts([]);
+      setWards([]);
+      setSelectedDistrictCode("");
+      return;
+    }
+
+    try {
+      const res = await axios.get(LOCATION_API_BASE + `/p/${provinceCode}?depth=2`);
+      setDistricts(res.data?.districts || []);
+    } catch (error) {
+      console.log(error);
+      toast.error("Không thể tải danh sách quận/huyện");
+    }
+  };
+
+  const loadWards = async (districtCode) => {
+    if (!districtCode) {
+      setWards([]);
+      return;
+    }
+
+    try {
+      const res = await axios.get(LOCATION_API_BASE + `/d/${districtCode}?depth=2`);
+      setWards(res.data?.wards || []);
+    } catch (error) {
+      console.log(error);
+      toast.error("Không thể tải danh sách phường/xã");
+    }
+  };
+
+  const handleProvinceChange = async (e) => {
+    const provinceCode = e.target.value;
+    const province = provinces.find((item) => item.code.toString() === provinceCode);
+
+    setSelectedProvinceCode(provinceCode);
+    setSelectedDistrictCode("");
+    setForm((prev) => ({
+      ...prev,
+      city: province?.name || "",
+      district: "",
+      ward: ""
+    }));
+    setWards([]);
+
+    await loadDistricts(provinceCode);
+  };
+
+  const handleDistrictChange = async (e) => {
+    const districtCode = e.target.value;
+    const district = districts.find((item) => item.code.toString() === districtCode);
+
+    setSelectedDistrictCode(districtCode);
+    setForm((prev) => ({
+      ...prev,
+      district: district?.name || "",
+      ward: ""
+    }));
+
+    await loadWards(districtCode);
+  };
+
+  const handleWardChange = (e) => {
+    const wardCode = e.target.value;
+    const ward = wards.find((item) => item.code.toString() === wardCode);
+
+    setForm((prev) => ({
+      ...prev,
+      ward: ward?.name || ""
+    }));
   };
 
   // LOAD PROFILE KHI MỞ TRANG
@@ -27,8 +128,9 @@ const Profile = () => {
 
       if (token) {
         const res = await axios.post(
-          "http://localhost:4000/api/user/profile",
-          {headers: {token}}
+          backendUrl + "/api/user/profile",
+          {},
+          { headers: { token } }
         );
 
         if (res.data.success) {
@@ -45,6 +147,7 @@ const Profile = () => {
             city: user.city || "",
             phone: user.phone || ""
           });
+          setProfileLoaded(true);
 
         }
       }
@@ -59,8 +162,36 @@ const Profile = () => {
 
   // chạy khi mở trang
   useEffect(() => {
-    loadProfile();
+    loadProvinces();
   }, []);
+
+  useEffect(() => {
+    loadProfile();
+  }, [token]);
+
+  useEffect(() => {
+    if (!profileLoaded || provinces.length === 0 || !form.city) {
+      return;
+    }
+
+    const matchedProvince = provinces.find((item) => item.name === form.city);
+    if (matchedProvince) {
+      setSelectedProvinceCode(matchedProvince.code.toString());
+      loadDistricts(matchedProvince.code.toString());
+    }
+  }, [profileLoaded, provinces, form.city]);
+
+  useEffect(() => {
+    if (!profileLoaded || districts.length === 0 || !form.district) {
+      return;
+    }
+
+    const matchedDistrict = districts.find((item) => item.name === form.district);
+    if (matchedDistrict) {
+      setSelectedDistrictCode(matchedDistrict.code.toString());
+      loadWards(matchedDistrict.code.toString());
+    }
+  }, [profileLoaded, districts, form.district]);
 
   // LƯU PROFILE
   const saveProfile = async () => {
@@ -69,7 +200,7 @@ const Profile = () => {
 
       if (token) {
         const res = await axios.post(
-          "http://localhost:4000/api/user/update-profile",
+          backendUrl + "/api/user/update-profile",
           {
             ...form
           },
@@ -99,6 +230,35 @@ const Profile = () => {
 
     }
 
+  };
+
+  const submitChangePassword = async () => {
+    try {
+      if (token) {
+        const res = await axios.post(
+          backendUrl + "/api/user/change-password",
+          passwordForm,
+          {
+            headers: { token }
+          }
+        );
+
+        if (res.data.success) {
+          toast.success(res.data.message);
+          setPasswordForm({
+            currentPassword: "",
+            newPassword: "",
+            confirmPassword: ""
+          });
+          setShowChangePassword(false);
+        } else {
+          toast.error(res.data.message);
+        }
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error("Không thể đổi mật khẩu");
+    }
   };
 
   return (
@@ -142,29 +302,46 @@ const Profile = () => {
           className="border p-3 rounded col-span-2"
         />
 
-        <input
-          name="ward"
-          value={form.ward}
-          onChange={handleChange}
-          placeholder="Phường/Xã"
-          className="border p-3 rounded"
-        />
+        <select
+          value={selectedProvinceCode}
+          onChange={handleProvinceChange}
+          className="border p-3 rounded col-span-2 bg-white"
+        >
+          <option value="">Chọn Tỉnh/Thành phố</option>
+          {provinces.map((province) => (
+            <option key={province.code} value={province.code}>
+              {province.name}
+            </option>
+          ))}
+        </select>
 
-        <input
-          name="district"
-          value={form.district}
-          onChange={handleChange}
-          placeholder="Quận/Huyện"
+        <select
+          value={selectedDistrictCode}
+          onChange={handleDistrictChange}
           className="border p-3 rounded"
-        />
+          disabled={!selectedProvinceCode}
+        >
+          <option value="">Chọn Quận/Huyện</option>
+          {districts.map((district) => (
+            <option key={district.code} value={district.code}>
+              {district.name}
+            </option>
+          ))}
+        </select>
 
-        <input
-          name="city"
-          value={form.city}
-          onChange={handleChange}
-          placeholder="Tỉnh/Thành phố"
-          className="border p-3 rounded col-span-2"
-        />
+        <select
+          value={wards.find((ward) => ward.name === form.ward)?.code || ""}
+          onChange={handleWardChange}
+          className="border p-3 rounded"
+          disabled={!selectedDistrictCode}
+        >
+          <option value="">Chọn Phường/Xã</option>
+          {wards.map((ward) => (
+            <option key={ward.code} value={ward.code}>
+              {ward.name}
+            </option>
+          ))}
+        </select>
 
         <input
           name="phone"
@@ -182,6 +359,53 @@ const Profile = () => {
       >
         Lưu thông tin
       </button>
+
+      <div className="mt-4">
+        <button
+          onClick={() => setShowChangePassword((prev) => !prev)}
+          className="bg-rose-500 text-white px-6 py-2 rounded"
+        >
+          {showChangePassword ? "Ẩn đổi mật khẩu" : "Đổi mật khẩu"}
+        </button>
+      </div>
+
+      {showChangePassword && (
+        <div className="mt-6 grid grid-cols-1 gap-4 max-w-xl">
+          <input
+            name="currentPassword"
+            value={passwordForm.currentPassword}
+            onChange={handlePasswordChange}
+            type="password"
+            placeholder="Mật khẩu hiện tại"
+            className="border p-3 rounded"
+          />
+
+          <input
+            name="newPassword"
+            value={passwordForm.newPassword}
+            onChange={handlePasswordChange}
+            type="password"
+            placeholder="Mật khẩu mới"
+            className="border p-3 rounded"
+          />
+
+          <input
+            name="confirmPassword"
+            value={passwordForm.confirmPassword}
+            onChange={handlePasswordChange}
+            type="password"
+            placeholder="Xác nhận mật khẩu mới"
+            className="border p-3 rounded"
+          />
+
+          <button
+            onClick={submitChangePassword}
+            className="bg-black text-white px-6 py-2 rounded w-fit"
+          >
+            Xác nhận đổi mật khẩu
+          </button>
+        </div>
+      )}
 
     </div>
   );

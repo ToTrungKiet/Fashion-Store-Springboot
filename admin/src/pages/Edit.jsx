@@ -5,6 +5,8 @@ import { backendUrl } from '../App.jsx'
 import { toast } from 'react-toastify'
 import { useParams, useNavigate } from 'react-router-dom'
 
+const COLORS = ['Đen', 'Trắng', 'Xám']
+
 const Edit = ({ token }) => {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -21,6 +23,45 @@ const Edit = ({ token }) => {
   const [subCategory, setSubCategory] = useState('Áo')
   const [bestseller, setBestseller] = useState(false)
   const [sizes, setSizes] = useState([])
+  const [inventory, setInventory] = useState({})
+
+  const buildVariantKey = (size, color) => `${size}__${color}`
+
+  const toggleSize = (size) => {
+    setSizes((prev) =>
+      prev.includes(size) ? prev.filter((item) => item !== size) : [...prev, size]
+    )
+
+    setInventory((prev) => {
+      const next = { ...prev }
+      COLORS.forEach((color) => {
+        const key = buildVariantKey(size, color)
+        if (!(key in next)) {
+          next[key] = 0
+        }
+      })
+      return next
+    })
+  }
+
+  const updateInventory = (size, color, value) => {
+    const numericValue = Number(value)
+    setInventory((prev) => ({
+      ...prev,
+      [buildVariantKey(size, color)]: Number.isNaN(numericValue) ? 0 : Math.max(numericValue, 0)
+    }))
+  }
+
+  const getInventoryPayload = () => {
+    const payload = {}
+    sizes.forEach((size) => {
+      COLORS.forEach((color) => {
+        const key = buildVariantKey(size, color)
+        payload[key] = inventory[key] || 0
+      })
+    })
+    return payload
+  }
 
   const fetchProduct = async () => {
     try {
@@ -34,6 +75,7 @@ const Edit = ({ token }) => {
         setSubCategory(p.subCategory)
         setBestseller(p.bestseller)
         setSizes(p.sizes || [])
+        setInventory(p.inventory || {})
         
         setImage1(p.image[0] || false)
         setImage2(p.image[1] || false)
@@ -65,6 +107,7 @@ const Edit = ({ token }) => {
       formData.append('subCategory', subCategory)
       formData.append('bestseller', bestseller)
       formData.append('sizes', JSON.stringify(sizes))
+      formData.append('inventoryData', JSON.stringify(getInventoryPayload()))
       
       if (image1 && image1 instanceof File) formData.append('image1', image1)
       if (image2 && image2 instanceof File) formData.append('image2', image2)
@@ -151,12 +194,38 @@ const Edit = ({ token }) => {
           <p className='mb-2'>Kích cỡ sản phẩm</p>
           <div className='flex gap-3'>
             {['S','M','L','XL','XXL'].map(sz => (
-              <div key={sz} onClick={() => setSizes(prev => prev.includes(sz) ? prev.filter(item => item !== sz) : [...prev, sz])}>
+              <div key={sz} onClick={() => toggleSize(sz)}>
                 <p className={`${sizes.includes(sz) ? 'bg-rose-300' : 'bg-slate-200'} px-3 py-1 cursor-pointer`}>{sz}</p>
               </div>
             ))}
           </div>
         </div>
+        {sizes.length > 0 && (
+          <div className='w-full max-w-[700px]'>
+            <p className='mb-2'>Kho hàng theo size và màu sắc</p>
+            <div className='grid grid-cols-[100px_repeat(3,1fr)] gap-2 items-center'>
+              <div className='font-medium'>Size</div>
+              {COLORS.map((color) => (
+                <div key={color} className='font-medium'>{color}</div>
+              ))}
+              {sizes.map((size) => (
+                <>
+                  <div key={`${size}-label`} className='font-medium'>{size}</div>
+                  {COLORS.map((color) => (
+                    <input
+                      key={buildVariantKey(size, color)}
+                      type='number'
+                      min='0'
+                      value={inventory[buildVariantKey(size, color)] ?? 0}
+                      onChange={(e) => updateInventory(size, color, e.target.value)}
+                      className='border px-3 py-2'
+                    />
+                  ))}
+                </>
+              ))}
+            </div>
+          </div>
+        )}
         <div className='flex gap-2 mt-2'>
           <input onChange={() => setBestseller(prev => !prev)} checked={bestseller} type="checkbox" id='bestseller'/>
           <label htmlFor="bestseller" className='cursor-pointer'>Thêm vào sản phẩm nổi bật</label>

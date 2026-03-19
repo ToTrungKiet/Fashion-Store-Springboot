@@ -39,6 +39,11 @@ public class User {
     private String city = "";
     private String phone = "";
 
+    @Column(length = 120)
+    private String resetPasswordToken;
+
+    private LocalDateTime resetPasswordExpiresAt;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

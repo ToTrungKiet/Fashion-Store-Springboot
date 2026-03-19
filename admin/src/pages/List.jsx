@@ -9,6 +9,9 @@ const List = ({token}) => {
   const [list, setList] = useState([])
   const navigate = useNavigate()
 
+  const getTotalStock = (inventory = {}) =>
+    Object.values(inventory).reduce((sum, quantity) => sum + (quantity || 0), 0)
+
   const fetchList = async () => {
     try {
       const response = await axios.get(backendUrl + '/api/product/list')
@@ -47,21 +50,25 @@ const List = ({token}) => {
       <p className='text-2xl font-bold mb-6 text-gray-800'>Danh sách tất cả sản phẩm</p>
       <div className='flex flex-col gap-2'>
         {/* Danh sách tiêu đề bảng */}
-        <div className='hidden md:grid grid-cols-[1fr_3fr_1fr_1fr_1fr] items-center py-1 px-2 border bg-gray-100 text-sm'>
+        <div className='hidden md:grid grid-cols-[1fr_3fr_1fr_1fr_1fr_1fr] items-center py-1 px-2 border bg-gray-100 text-sm'>
           <b>Hình ảnh</b>
           <b>Tên sản phẩm</b>
           <b>Danh mục</b>
           <b>Giá</b>
+          <b>Tồn kho</b>
           <b className='text-center'>Hành động</b>
         </div>
         {/* Danh sách sản phẩm */}
         {
           list.map((item, index) => (
-            <div key={index} className='grid grid-cols-[1fr_3fr_1fr] md:grid-cols-[1fr_3fr_1fr_1fr_1fr] items-center gap-2 py-1 px-2 border text-sm'>
+            <div key={index} className='grid grid-cols-[1fr_3fr_1fr] md:grid-cols-[1fr_3fr_1fr_1fr_1fr_1fr] items-center gap-2 py-1 px-2 border text-sm'>
               <img className='w-28 object-cover' src={item.image[0]} alt="" />
               <p>{item.name}</p>
               <p>{item.category}</p>
               <p>{formatPrice(item.price)} {currency}</p>
+              <p className={getTotalStock(item.inventory) < 20 ? 'text-red-500 font-semibold' : ''}>
+                {getTotalStock(item.inventory)}
+              </p>
               <div className='flex justify-end md:justify-center gap-2'>
                 <span onClick={() => removeProduct(item.id)} className='cursor-pointer text-lg'>X</span>
                 <span onClick={() => navigate(`/edit/${item.id}`)} className='cursor-pointer text-lg'>✎</span>
