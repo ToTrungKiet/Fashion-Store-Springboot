@@ -10,6 +10,20 @@ const Orders = () => {
   const location = useLocation()
   const [orders, setOrders] = useState([])
 
+  const formatOrderDate = (date) => new Date(date).toLocaleDateString('vi-VN')
+
+  const getPaymentLabel = (paymentMethod) => {
+    if (paymentMethod === 'cod') {
+      return 'COD'
+    }
+
+    if (paymentMethod === 'vnpay') {
+      return 'VNPAY'
+    }
+
+    return (paymentMethod || '').toUpperCase()
+  }
+
   const loadOrderData = async () => {
     try {
       if (!token) {
@@ -96,42 +110,57 @@ const Orders = () => {
             const canRetryVnPay = order.paymentMethod === 'vnpay' && !order.payment
 
             return (
-              <div key={order.id} className='py-5 border-b text-gray-700'>
-                <div className='flex flex-col gap-2 md:flex-row md:items-center md:justify-between'>
-                  <div className='text-sm'>
-                    <p>Mã đơn: <span className='text-gray-500'>#{order.id}</span></p>
-                    <p>Ngày đặt: <span className='text-gray-500'>{new Date(order.createdAt).toLocaleDateString('vi-VN')}</span></p>
-                    <p>Phương thức thanh toán: <span className='text-gray-500 uppercase'>{order.paymentMethod}</span></p>
-                    <p>Thanh toán: <span className='text-gray-500'>{order.payment ? 'Đã thanh toán' : 'Chưa thanh toán'}</span></p>
-                  </div>
-                  <div className='flex items-center gap-3'>
-                    <div className='flex items-center gap-2'>
-                      <p className={`min-w-2 h-2 rounded-full ${order.payment ? 'bg-green-500' : 'bg-amber-500'}`}></p>
-                      <p className='text-sm md:text-base'>{order.status}</p>
-                    </div>
-                    {canRetryVnPay && (
-                      <button
-                        onClick={() => retryVnPayPayment(order.id)}
-                        className='bg-rose-500 hover:bg-rose-600 text-white px-4 py-2 text-sm rounded-sm'
-                      >
-                        Thanh toán lại
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div className='mt-4 flex flex-col gap-4'>
+              <div key={order.id} className='border-b py-4 text-gray-700'>
+                <div className='flex flex-col gap-4'>
                   {order.parsedItems.map((item, index) => (
-                    <div key={`${order.id}-${index}`} className='flex items-start gap-6 text-sm'>
-                      <img className='w-16 sm:w-20' src={item.image[0]} alt='' />
-                      <div>
-                        <p className='sm:text-base font-medium'>{item.name}</p>
-                        <div className='flex flex-wrap items-center gap-3 mt-2 text-base text-gray-700'>
-                          <p className='text-lg'>{formatPrice(item.price)} {currency}</p>
-                          <p>Số lượng: {item.quantity}</p>
-                          <p>Kích cỡ: {item.size}</p>
-                          <p>Màu: {item.color}</p>
+                    <div
+                      key={`${order.id}-${index}`}
+                      className='grid grid-cols-1 gap-4 text-sm lg:grid-cols-[minmax(0,1.8fr)_minmax(180px,0.9fr)_auto] lg:items-center'
+                    >
+                      <div className='flex items-start gap-4'>
+                        <img className='w-16 sm:w-20 shrink-0' src={item.image[0]} alt={item.name} />
+                        <div className='min-w-0'>
+                          <p className='sm:text-base font-medium text-gray-800'>{item.name}</p>
+                          <div className='mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm sm:text-base text-gray-700'>
+                            <p>{formatPrice(item.price)} {currency}</p>
+                            <p>Số lượng: {item.quantity}</p>
+                            <p>Kích cỡ: {item.size}</p>
+                            <p>Màu: {item.color}</p>
+                          </div>
+                          <div className='mt-2 space-y-1 text-xs sm:text-sm text-gray-500'>
+                            <p>Ngày: {formatOrderDate(order.createdAt)}</p>
+                            <p>Phương thức thanh toán: {getPaymentLabel(order.paymentMethod)}</p>
+                            <p>
+                              Trạng thái thanh toán:{' '}
+                              <span className={order.payment ? 'text-green-600' : 'text-orange-500'}>
+                                {order.payment ? 'Đã thanh toán' : 'Chưa thanh toán'}
+                              </span>
+                            </p>
+                          </div>
                         </div>
+                      </div>
+
+                      <div className='flex items-center gap-2 text-sm sm:text-base text-gray-600 lg:justify-center'>
+                        <span className='h-2 w-2 rounded-full bg-indigo-400'></span>
+                        <p>{order.status}</p>
+                      </div>
+
+                      <div className='flex lg:justify-end'>
+                        {canRetryVnPay ? (
+                          <button
+                            onClick={() => retryVnPayPayment(order.id)}
+                            className='border border-rose-500 bg-rose-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-600'
+                          >
+                            Thanh toán lại
+                          </button>
+                        ) : (
+                          <button
+                            onClick={loadOrderData}
+                            className='border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50'
+                          >
+                            Theo dõi đơn hàng
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}

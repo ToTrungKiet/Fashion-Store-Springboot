@@ -5,7 +5,7 @@ import { assets } from '../assets/assets'
 import CartTotal from '../components/CartTotal'
 
 const Cart = () => {
-  const { products, currency, cartItems, updateQuantity, formatPrice, navigate, parseVariantKey, delivery_fee } = useContext(ShopContext)
+  const { products, currency, cartItems, updateQuantity, formatPrice, navigate, parseVariantKey } = useContext(ShopContext)
   const [selectedItems, setSelectedItems] = useState({})
 
   const cartData = useMemo(() => {
@@ -67,7 +67,7 @@ const Cart = () => {
     0
   )
 
-  const selectedTotal = selectedSubtotal === 0 ? 0 : selectedSubtotal + delivery_fee
+  const summaryAmount = selectedCartData.length > 0 ? selectedSubtotal : 0
 
   const toggleSelectAll = () => {
     if (isAllSelected) {
@@ -188,17 +188,7 @@ const Cart = () => {
 
       <div className='flex justify-end my-20'>
         <div className='w-full sm:w-[450px]'>
-          <CartTotal />
-          <div className='mt-4 rounded border border-gray-200 p-4 text-sm text-gray-700'>
-            <div className='flex justify-between'>
-              <span>Tạm tính đã chọn</span>
-              <span>{formatPrice(selectedSubtotal)} {currency}</span>
-            </div>
-            <div className='flex justify-between mt-2'>
-              <span>Tổng đã chọn</span>
-              <span>{selectedTotal === 0 ? 0 : formatPrice(selectedTotal)} {currency}</span>
-            </div>
-          </div>
+          <CartTotal amount={summaryAmount} />
           <div className='w-full text-end'>
             <button
               onClick={checkoutSelectedItems}

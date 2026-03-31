@@ -439,20 +439,8 @@ const PlaceOrder = () => {
       {/* BÊN PHẢI */}
       <div className='mt-8'>
         <div className='mt-8 min-w-80'>
-          <CartTotal />
+          <CartTotal amount={orderSubtotal} />
         </div>
-        {selectedItemsFromCart && selectedItemsFromCart.length > 0 && (
-          <div className='mt-4 rounded border border-gray-200 p-4 text-sm text-gray-700'>
-            <div className='flex justify-between'>
-              <span>Tạm tính đơn đã chọn</span>
-              <span>{orderSubtotal.toLocaleString('vi-VN')} VND</span>
-            </div>
-            <div className='flex justify-between mt-2'>
-              <span>Tổng thanh toán</span>
-              <span>{(orderSubtotal + delivery_fee).toLocaleString('vi-VN')} VND</span>
-            </div>
-          </div>
-        )}
 
         <div className='mt-12'>
           <Title text1={'PHƯƠNG THỨC'} text2={'THANH TOÁN'} />
